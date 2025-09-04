@@ -1,0 +1,28 @@
+# Dynamic configuration for Temporal development environment
+# This is a minimal configuration for POC-level setup
+
+# Enable development mode
+temporal.frontend.enableClientVersionCheck:
+  - value: false
+
+# Reduce history event limits for development
+temporal.frontend.historyMgrNumConns:
+  - value: 10
+
+# Set reasonable timeouts for development
+temporal.frontend.rps:
+  - value: 1000
+
+# Enable search attributes
+temporal.frontend.enableCrossNamespaceCommands:
+  - value: true
+
+# Development-friendly settings
+temporal.worker.buildIdScavengerEnabled:
+  - value: false
+
+temporal.frontend.enableUpdateWorkflowExecution:
+  - value: true
+
+temporal.frontend.enableUpdateWorkflowExecutionAsyncAccepted:
+  - value: true
