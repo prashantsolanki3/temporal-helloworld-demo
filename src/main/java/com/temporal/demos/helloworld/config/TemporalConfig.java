@@ -9,7 +9,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 
 import com.temporal.demos.helloworld.activities.HelloWorldActivitiesImpl;
+import com.temporal.demos.helloworld.activities.ApprovalActivitiesImpl;
 import com.temporal.demos.helloworld.workflows.HelloWorldWorkflowImpl;
+import com.temporal.demos.helloworld.workflows.ApprovalWorkflowImpl;
 
 @Configuration
 public class TemporalConfig {
@@ -37,8 +39,8 @@ public class TemporalConfig {
     @DependsOn("workerFactory")
     public Worker worker(WorkerFactory workerFactory) {
         Worker worker = workerFactory.newWorker(TASK_QUEUE);
-        worker.registerWorkflowImplementationTypes(HelloWorldWorkflowImpl.class);
-        worker.registerActivitiesImplementations(new HelloWorldActivitiesImpl());
+        worker.registerWorkflowImplementationTypes(HelloWorldWorkflowImpl.class, ApprovalWorkflowImpl.class);
+        worker.registerActivitiesImplementations(new HelloWorldActivitiesImpl(), new ApprovalActivitiesImpl());
         workerFactory.start();
         return worker;
     }

@@ -133,6 +133,8 @@ mvn spring-boot:run
 
 ## 📡 API Endpoints
 
+### Hello World Endpoints
+
 ### GET /api/hello
 **Description**: Execute Hello World workflow with default or custom name
 
@@ -156,6 +158,80 @@ curl -X POST http://localhost:8090/api/hello \
   -H "Content-Type: application/json" \
   -d '{"name": "Bob"}'
 # Response: "Hello, Bob! Welcome to Temporal, Bob!"
+```
+
+### Human-in-the-Loop Approval Endpoints
+
+### POST /api/approval/request
+**Description**: Submit an approval request that requires human intervention
+
+**Example**:
+```bash
+curl -X POST http://localhost:8090/api/approval/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestId": "REQ-001",
+    "requestType": "BUDGET_REQUEST",
+    "requestDetails": "Need $50,000 for development tools and licenses",
+    "requesterEmail": "john.doe@company.com"
+  }'
+```
+
+**Valid Request Types**: `BUDGET_REQUEST`, `PERSONNEL_CHANGE`, `SYSTEM_ACCESS`, `PROCUREMENT`, `POLICY_EXCEPTION`
+
+### POST /api/approval/approve/{workflowId}
+**Description**: Approve a pending request (Human Signal)
+
+**Example**:
+```bash
+curl -X POST http://localhost:8090/api/approval/approve/WORKFLOW_ID \
+  -H "Content-Type: application/json" \
+  -d '{
+    "approverEmail": "manager@company.com",
+    "comments": "Approved for Q4 budget allocation"
+  }'
+```
+
+### POST /api/approval/reject/{workflowId}
+**Description**: Reject a pending request (Human Signal)
+
+**Example**:
+```bash
+curl -X POST http://localhost:8090/api/approval/reject/WORKFLOW_ID \
+  -H "Content-Type: application/json" \
+  -d '{
+    "approverEmail": "manager@company.com",
+    "reason": "Insufficient budget remaining for Q4"
+  }'
+```
+
+### GET /api/approval/status/{workflowId}
+**Description**: Check real-time status of approval workflow (Query)
+
+**Example**:
+```bash
+curl http://localhost:8090/api/approval/status/WORKFLOW_ID
+```
+
+**Response**:
+```json
+{
+  "workflowId": "approval-uuid",
+  "status": "PENDING",
+  "currentStep": "AWAITING_APPROVAL",
+  "requestDetails": "Request ID: REQ-001, Type: BUDGET_REQUEST...",
+  "waitingTimeSeconds": 125,
+  "waitingTimeMinutes": 2,
+  "completed": false
+}
+```
+
+### GET /api/approval/result/{workflowId}
+**Description**: Get final result (blocks until workflow completes)
+
+**Example**:
+```bash
+curl http://localhost:8090/api/approval/result/WORKFLOW_ID
 ```
 
 ## 🔍 Key Benefits Demonstrated
@@ -275,3 +351,61 @@ To extend this demo, consider exploring:
    - Event-driven architectures
 
 This demo provides a solid foundation for building production-ready distributed systems with Temporal's durable execution platform.
+
+## 🧪 **Demo Usage Examples:**
+
+### Quick Demo Script
+Run the comprehensive demo script:
+```bash
+./demo-approval-workflow.sh
+```
+
+### Manual Testing Steps
+
+#### 1. Submit Approval Request
+```bash
+RESPONSE=$(curl -s -X POST http://localhost:8090/api/approval/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestId": "REQ-$(date +%s)", 
+    "requestType": "BUDGET_REQUEST",
+    "requestDetails": "Need $10,000 for team training",
+    "requesterEmail": "employee@company.com"
+  }')
+
+WORKFLOW_ID=$(echo $RESPONSE | jq -r '.workflowId')
+echo "Workflow ID: $WORKFLOW_ID"
+```
+
+#### 2. Check Status (Real-time Query)
+```bash
+curl http://localhost:8090/api/approval/status/$WORKFLOW_ID
+```
+
+#### 3. Approve Request (Human Signal)
+```bash
+curl -X POST http://localhost:8090/api/approval/approve/$WORKFLOW_ID \
+  -H "Content-Type: application/json" \
+  -d '{
+    "approverEmail": "manager@company.com",
+    "comments": "Approved for professional development"
+  }'
+```
+
+#### 4. Get Final Result
+```bash
+curl http://localhost:8090/api/approval/result/$WORKFLOW_ID
+```
+
+### Alternative: Rejection Flow
+```bash
+# Submit request (steps 1-2 same as above)
+
+# Reject instead of approve
+curl -X POST http://localhost:8090/api/approval/reject/$WORKFLOW_ID \
+  -H "Content-Type: application/json" \
+  -d '{
+    "approverEmail": "manager@company.com",
+    "reason": "Budget not available this quarter"
+  }'
+```
