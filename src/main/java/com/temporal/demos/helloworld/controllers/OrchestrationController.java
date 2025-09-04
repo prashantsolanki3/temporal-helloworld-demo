@@ -39,7 +39,7 @@ public class OrchestrationController {
         );
         
         // Start workflow asynchronously
-        WorkflowClient.start(workflow::orchestrateExternalApiCalls, request.getUserId());
+        WorkflowClient.start(workflow::orchestrateExternalApiCalls, request.getUserId(), request.isUseAsyncPayment());
         
         Map<String, Object> response = new HashMap<>();
         response.put("workflowId", workflowId);
@@ -67,7 +67,7 @@ public class OrchestrationController {
             );
             
             // Execute workflow synchronously and wait for result
-            String result = workflow.orchestrateExternalApiCalls(request.getUserId());
+            String result = workflow.orchestrateExternalApiCalls(request.getUserId(), request.isUseAsyncPayment());
             String endTime = LocalDateTime.now().format(formatter);
             
             Map<String, Object> response = new HashMap<>();
@@ -167,6 +167,15 @@ public class OrchestrationController {
     public ResponseEntity<Map<String, Object>> testOrchestration(@PathVariable String userId) {
         OrchestrationRequest request = new OrchestrationRequest();
         request.setUserId(userId);
+        request.setUseAsyncPayment(false); // Default to sync payment
+        return executeOrchestrationSync(request);
+    }
+    
+    @GetMapping("/test-async/{userId}")
+    public ResponseEntity<Map<String, Object>> testAsyncOrchestration(@PathVariable String userId) {
+        OrchestrationRequest request = new OrchestrationRequest();
+        request.setUserId(userId);
+        request.setUseAsyncPayment(true); // Use async payment
         return executeOrchestrationSync(request);
     }
     
@@ -220,57 +229,16 @@ public class OrchestrationController {
         return ResponseEntity.ok(response);
     }
     
-    @PostMapping("/test-async-payment")
-    public ResponseEntity<Map<String, Object>> testAsyncPayment(@RequestBody OrchestrationRequest request) {
-        String workflowId = "async-payment-test-" + UUID.randomUUID().toString();
-        String startTime = LocalDateTime.now().format(formatter);
-        
-        try {
-            // Create workflow stub
-            OrchestrationWorkflow workflow = workflowClient.newWorkflowStub(
-                    OrchestrationWorkflow.class,
-                    WorkflowOptions.newBuilder()
-                            .setWorkflowId(workflowId)
-                            .setTaskQueue(TemporalConfig.TASK_QUEUE)
-                            .build()
-            );
-            
-            // Execute workflow synchronously to see async payment polling in action
-            String result = workflow.orchestrateExternalApiCalls(request.getUserId());
-            String endTime = LocalDateTime.now().format(formatter);
-            
-            Map<String, Object> response = new HashMap<>();
-            response.put("workflowId", workflowId);
-            response.put("userId", request.getUserId());
-            response.put("status", "COMPLETED");
-            response.put("startTime", startTime);
-            response.put("endTime", endTime);
-            response.put("result", result);
-            response.put("message", "Async Payment Orchestration completed - check logs for polling activity");
-            response.put("paymentPattern", "async-with-polling-every-minute");
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("workflowId", workflowId);
-            errorResponse.put("userId", request.getUserId());
-            errorResponse.put("status", "FAILED");
-            errorResponse.put("startTime", startTime);
-            errorResponse.put("endTime", LocalDateTime.now().format(formatter));
-            errorResponse.put("error", "Async Payment Orchestration failed");
-            errorResponse.put("details", e.getMessage());
-            
-            return ResponseEntity.internalServerError().body(errorResponse);
-        }
-    }
-    
     // Request DTO
     public static class OrchestrationRequest {
         private String userId;
+        private boolean useAsyncPayment = false; // Default to synchronous payment
         
         // Getters and setters
         public String getUserId() { return userId; }
         public void setUserId(String userId) { this.userId = userId; }
+        
+        public boolean isUseAsyncPayment() { return useAsyncPayment; }
+        public void setUseAsyncPayment(boolean useAsyncPayment) { this.useAsyncPayment = useAsyncPayment; }
     }
 }

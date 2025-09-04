@@ -7,5 +7,5 @@ import io.temporal.workflow.WorkflowMethod;
 public interface OrchestrationWorkflow {
     
     @WorkflowMethod
-    String orchestrateExternalApiCalls(String userId);
+    String orchestrateExternalApiCalls(String userId, boolean useAsyncPayment);
 }

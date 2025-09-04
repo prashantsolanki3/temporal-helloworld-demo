@@ -66,10 +66,10 @@ This pattern is recommended for:
 ### Core Orchestration Endpoints
 - `POST /api/orchestration/execute` - Start orchestration asynchronously
 - `POST /api/orchestration/execute-sync` - Run orchestration synchronously
-- `POST /api/orchestration/test-async-payment` - Test async payment with polling pattern
 - `GET /api/orchestration/status/{workflowId}` - Check workflow status
 - `GET /api/orchestration/result/{workflowId}` - Get workflow result
-- `GET /api/orchestration/test/{userId}` - Quick test endpoint
+- `GET /api/orchestration/test/{userId}` - Quick test endpoint (sync payment)
+- `GET /api/orchestration/test-async/{userId}` - Quick test endpoint (async payment)
 
 ### Error Simulation Control
 - `POST /api/orchestration/error-simulation/enable` - Enable random errors
@@ -120,15 +120,21 @@ curl -X POST -H "Content-Type: application/json" \
   http://localhost:8090/api/orchestration/execute-sync
 ```
 ```bash
+### Scenario 4: Async Payment Polling Pattern
+```bash
 # Enable errors and test async payment with server-side retries
 curl -X POST http://localhost:8090/api/orchestration/error-simulation/enable
 
-# Test the async payment pattern (takes several minutes)
+# Test the async payment pattern using parameter (takes several minutes)
 curl -X POST -H "Content-Type: application/json" \
-  -d '{"userId":"test-async-payment"}' \
-  http://localhost:8090/api/orchestration/test-async-payment
+  -d '{"userId":"test-async-payment","useAsyncPayment":true}' \
+  http://localhost:8090/api/orchestration/execute-sync
+
+# Or use the quick test endpoint
+curl http://localhost:8090/api/orchestration/test-async/test-user
 
 # Watch logs for polling activity every minute
+```
 ```
 ```bash
 # Test with errors enabled

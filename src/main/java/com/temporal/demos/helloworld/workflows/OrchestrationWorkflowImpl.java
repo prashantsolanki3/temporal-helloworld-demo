@@ -47,8 +47,8 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
             Workflow.newActivityStub(ExternalApiActivities.class, pollingActivityOptions);
     
     @Override
-    public String orchestrateExternalApiCalls(String userId) {
-        Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Starting orchestration for user: {} (with retry-enabled activities)", userId);
+    public String orchestrateExternalApiCalls(String userId, boolean useAsyncPayment) {
+        Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Starting orchestration for user: {} (async payment: {})", userId, useAsyncPayment);
         
         String startTime = LocalDateTime.now().format(formatter);
         
@@ -68,24 +68,29 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
         Promise<String> orderServicePromise = Async.function(activities::callOrderService, userId);
         Promise<String> notificationServicePromise = Async.function(activities::callNotificationService, userId);
         
-        // STEP 3: Async PaymentService - Start payment process and poll for completion
-        Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Step 3: Starting ASYNC PaymentService after user verification...");
+        // STEP 3: PaymentService - either sync or async based on parameter
+        Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Step 3: Starting PaymentService (mode: {})", useAsyncPayment ? "ASYNC" : "SYNC");
         String paymentServiceResult;
         try {
-            // Step 3a: Initiate async payment process
-            String paymentInitResult = activities.initiateAsyncPaymentProcess(userId, 150.75);
-            Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Async payment initiated for user: {}", userId);
-            
-            // Extract payment ID from the result (simple JSON parsing)
-            String paymentId = extractPaymentId(paymentInitResult);
-            
-            // Step 3b: Poll for payment completion using server-side retries pattern
-            Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Starting polling for payment completion: {}", paymentId);
-            paymentServiceResult = pollingActivities.pollPaymentStatus(paymentId);
-            Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Async PaymentService completed successfully for user: {}", userId);
-            
+            if (useAsyncPayment) {
+                // Async payment with polling
+                String paymentInitResult = activities.initiateAsyncPaymentProcess(userId, 150.75);
+                Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Async payment initiated for user: {}", userId);
+                
+                // Extract payment ID from the result
+                String paymentId = extractPaymentId(paymentInitResult);
+                
+                // Poll for payment completion using server-side retries pattern
+                Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Starting polling for payment completion: {}", paymentId);
+                paymentServiceResult = pollingActivities.pollPaymentStatus(paymentId);
+                Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Async PaymentService completed successfully for user: {}", userId);
+            } else {
+                // Synchronous payment
+                paymentServiceResult = activities.callPaymentService(userId);
+                Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Sync PaymentService completed successfully for user: {}", userId);
+            }
         } catch (Exception e) {
-            Workflow.getLogger(OrchestrationWorkflowImpl.class).error("Async PaymentService failed for user: {}", userId, e);
+            Workflow.getLogger(OrchestrationWorkflowImpl.class).error("PaymentService failed for user: {} (mode: {})", userId, useAsyncPayment ? "ASYNC" : "SYNC", e);
             throw e;
         }
         
@@ -140,14 +145,16 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
         compiledResult.append("\"startTime\":\"").append(startTime).append("\",");
         compiledResult.append("\"endTime\":\"").append(endTime).append("\",");
         compiledResult.append("\"totalServices\":").append(allResults.size()).append(",");
-        compiledResult.append("\"executionPattern\":\"mixed-sequential-parallel-with-async-polling\",");
+        compiledResult.append("\"executionPattern\":\"").append(useAsyncPayment ? "mixed-sequential-parallel-with-async-polling" : "mixed-sequential-parallel").append("\",");
         compiledResult.append("\"executionSteps\":[");
         compiledResult.append("\"1. UserService (sequential - first)\",");
         compiledResult.append("\"2. OrderService + NotificationService (parallel)\",");
-        compiledResult.append("\"3. AsyncPaymentService (sequential - with polling pattern)\",");
+        compiledResult.append("\"3. ").append(useAsyncPayment ? "AsyncPaymentService (sequential - with polling pattern)" : "PaymentService (sequential - synchronous)").append("\",");
         compiledResult.append("\"4. RecommendationService (sequential - last)\"");
         compiledResult.append("],");
-        compiledResult.append("\"paymentPattern\":\"async-with-server-side-retries\",");
+        if (useAsyncPayment) {
+            compiledResult.append("\"paymentPattern\":\"async-with-server-side-retries\",");
+        }
         compiledResult.append("\"services\":[");
         
         // Get results from all services

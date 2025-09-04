@@ -46,6 +46,15 @@ public interface ExternalApiActivities {
 }
 ```
 
+### 2. Request Structure
+```java
+// Request DTO with async parameter
+{
+    "userId": "test-user",
+    "useAsyncPayment": true  // false for synchronous payment
+}
+```
+
 ### 2. Retry Configuration
 ```java
 private final ActivityOptions pollingActivityOptions = ActivityOptions.newBuilder()
@@ -62,15 +71,19 @@ private final ActivityOptions pollingActivityOptions = ActivityOptions.newBuilde
 ### 3. Workflow Implementation
 ```java
 @Override
-public String orchestrateExternalApiCalls(String userId) {
-    // Step 1: Initiate async payment
-    String paymentInitResult = activities.initiateAsyncPaymentProcess(userId, 150.75);
-    String paymentId = extractPaymentId(paymentInitResult);
-    
-    // Step 2: Poll for completion (uses server-side retries)
-    String paymentResult = pollingActivities.pollPaymentStatus(paymentId);
-    
-    return paymentResult;
+public String orchestrateExternalApiCalls(String userId, boolean useAsyncPayment) {
+    if (useAsyncPayment) {
+        // Step 1: Initiate async payment
+        String paymentInitResult = activities.initiateAsyncPaymentProcess(userId, 150.75);
+        String paymentId = extractPaymentId(paymentInitResult);
+        
+        // Step 2: Poll for completion (uses server-side retries)
+        String paymentResult = pollingActivities.pollPaymentStatus(paymentId);
+        return paymentResult;
+    } else {
+        // Use synchronous payment
+        return activities.callPaymentService(userId);
+    }
 }
 ```
 
@@ -131,11 +144,15 @@ public String pollPaymentStatus(String paymentId) {
 curl -X POST http://localhost:8090/api/orchestration/error-simulation/enable
 ```
 
-### 2. Test Async Payment
+### 2. Test Async Payment with Parameter
 ```bash
+# Test async payment using parameter
 curl -X POST -H "Content-Type: application/json" \
-  -d '{"userId":"test-async-user"}' \
-  http://localhost:8090/api/orchestration/test-async-payment
+  -d '{"userId":"test-async-user","useAsyncPayment":true}' \
+  http://localhost:8090/api/orchestration/execute-sync
+
+# Or use the quick test endpoint
+curl http://localhost:8090/api/orchestration/test-async/test-user
 ```
 
 ### 3. Observe Polling Behavior
