@@ -148,6 +148,10 @@ public class ApprovalController {
             errorResponse.put("error", "Failed to get workflow status");
             errorResponse.put("workflowId", workflowId);
             errorResponse.put("details", e.getMessage());
+            errorResponse.put("exceptionType", e.getClass().getSimpleName());
+            
+            // Print stack trace for debugging
+            e.printStackTrace();
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
