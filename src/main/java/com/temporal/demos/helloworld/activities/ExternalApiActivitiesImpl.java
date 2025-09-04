@@ -7,6 +7,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Component
@@ -17,6 +20,33 @@ public class ExternalApiActivitiesImpl implements ExternalApiActivities {
     
     // Flag to enable/disable random error simulation (can be toggled for testing)
     private static boolean errorSimulationEnabled = false;
+    
+    // Simulate an in-memory payment tracking system
+    private static final Map<String, PaymentStatus> paymentTracker = new ConcurrentHashMap<>();
+    
+    // Payment status enum
+    private enum PaymentState {
+        INITIATED, PROCESSING, COMPLETED, FAILED
+    }
+    
+    // Payment status data structure
+    private static class PaymentStatus {
+        PaymentState state;
+        String userId;
+        double amount;
+        LocalDateTime initiatedAt;
+        LocalDateTime lastUpdatedAt;
+        int pollCount;
+        
+        PaymentStatus(String userId, double amount) {
+            this.userId = userId;
+            this.amount = amount;
+            this.state = PaymentState.INITIATED;
+            this.initiatedAt = LocalDateTime.now();
+            this.lastUpdatedAt = LocalDateTime.now();
+            this.pollCount = 0;
+        }
+    }
     
     @Override
     public String callUserService(String userId) {
@@ -161,5 +191,137 @@ public class ExternalApiActivitiesImpl implements ExternalApiActivities {
      */
     public static boolean isErrorSimulationEnabled() {
         return errorSimulationEnabled;
+    }
+    
+    // ========================================
+    // ASYNC PAYMENT SERVICE IMPLEMENTATION
+    // ========================================
+    
+    /**
+     * Initiates an async payment process that will complete over time.
+     * This simulates starting a payment process on an external system that
+     * doesn't return results immediately.
+     * 
+     * @param userId The user ID for the payment
+     * @param amount The payment amount
+     * @return Payment ID that can be used to poll for status
+     */
+    @Override
+    public String initiateAsyncPaymentProcess(String userId, double amount) {
+        String serviceName = "AsyncPaymentService";
+        String paymentId = "payment-" + UUID.randomUUID().toString();
+        
+        logger.info("Initiating async payment process for user: {}, amount: ${}, paymentId: {}", 
+                userId, amount, paymentId);
+        
+        // Simulate potential failure during payment initiation (20% error rate)
+        if (errorSimulationEnabled) {
+            RandomErrorGenerator.maybeThrowError(20, serviceName + "-Initiation");
+        }
+        
+        // Simulate API call to external payment service (1-3 seconds)
+        simulateApiCall(1000, 3000);
+        
+        // Create payment tracking entry
+        PaymentStatus paymentStatus = new PaymentStatus(userId, amount);
+        paymentTracker.put(paymentId, paymentStatus);
+        
+        // Simulate random payment processing time (will complete in 2-8 poll cycles)
+        int pollsToComplete = ThreadLocalRandom.current().nextInt(2, 9);
+        paymentStatus.pollCount = -pollsToComplete; // Negative means still processing
+        
+        String result = String.format(
+                "{\"service\":\"%s\",\"paymentId\":\"%s\",\"userId\":\"%s\",\"amount\":%.2f," +
+                "\"status\":\"INITIATED\",\"timestamp\":\"%s\",\"estimatedPollsToComplete\":%d}",
+                serviceName, paymentId, userId, amount, LocalDateTime.now().format(formatter), pollsToComplete);
+        
+        logger.info("Payment process initiated successfully. PaymentId: {}, Result: {}", paymentId, result);
+        return result;
+    }
+    
+    /**
+     * Polls the status of an async payment process.
+     * This method implements the server-side retries pattern by throwing an exception
+     * when the payment is still processing, causing Temporal to retry automatically.
+     * 
+     * @param paymentId The payment ID to check
+     * @return Payment status if completed, throws exception if still processing
+     */
+    @Override
+    public String pollPaymentStatus(String paymentId) {
+        String serviceName = "AsyncPaymentService-Poll";
+        
+        logger.info("Polling payment status for paymentId: {}", paymentId);
+        
+        // Simulate potential network/service failures during polling (15% error rate)
+        if (errorSimulationEnabled) {
+            RandomErrorGenerator.maybeThrowError(15, serviceName);
+        }
+        
+        // Simulate API call to check payment status (0.5-2 seconds)
+        simulateApiCall(500, 2000);
+        
+        PaymentStatus payment = paymentTracker.get(paymentId);
+        if (payment == null) {
+            throw new RuntimeException("Payment not found: " + paymentId);
+        }
+        
+        // Update poll count and last updated time
+        payment.pollCount++;
+        payment.lastUpdatedAt = LocalDateTime.now();
+        
+        logger.info("Payment {} poll #{}: Current state: {}", paymentId, payment.pollCount, payment.state);
+        
+        // Simulate payment processing progression
+        if (payment.pollCount <= 0) {
+            // Still processing - this will trigger a retry
+            payment.state = PaymentState.PROCESSING;
+            
+            // Simulate occasional processing failures (10% chance)
+            if (errorSimulationEnabled && RandomErrorGenerator.shouldThrowError(10)) {
+                throw RandomErrorGenerator.createServiceException(serviceName, payment.userId, "PAYMENT_PROCESSING_ERROR");
+            }
+            
+            // Throw exception to trigger retry (server-side retries pattern)
+            throw new RuntimeException("Payment " + paymentId + " is still processing. Poll #" + payment.pollCount + 
+                    " (Started: " + payment.initiatedAt.format(formatter) + ")");
+        }
+        
+        // Payment processing complete - determine final status
+        if (errorSimulationEnabled && RandomErrorGenerator.shouldThrowError(20)) {
+            // 20% chance of payment failure
+            payment.state = PaymentState.FAILED;
+            String result = String.format(
+                    "{\"service\":\"%s\",\"paymentId\":\"%s\",\"userId\":\"%s\",\"amount\":%.2f," +
+                    "\"status\":\"FAILED\",\"timestamp\":\"%s\",\"totalPolls\":%d,\"error\":\"Payment processing failed\"}",
+                    serviceName, paymentId, payment.userId, payment.amount, 
+                    LocalDateTime.now().format(formatter), payment.pollCount);
+            
+            logger.error("Payment {} failed after {} polls", paymentId, payment.pollCount);
+            
+            // Remove from tracker
+            paymentTracker.remove(paymentId);
+            
+            // Return failure result (do not throw exception as this is a valid business outcome)
+            return result;
+        } else {
+            // Payment completed successfully
+            payment.state = PaymentState.COMPLETED;
+            String result = String.format(
+                    "{\"service\":\"%s\",\"paymentId\":\"%s\",\"userId\":\"%s\",\"amount\":%.2f," +
+                    "\"status\":\"COMPLETED\",\"timestamp\":\"%s\",\"totalPolls\":%d," +
+                    "\"processingTime\":\"%s\",\"transactionId\":\"txn-%s\"}",
+                    serviceName, paymentId, payment.userId, payment.amount, 
+                    LocalDateTime.now().format(formatter), payment.pollCount,
+                    java.time.Duration.between(payment.initiatedAt, payment.lastUpdatedAt).toString(),
+                    UUID.randomUUID().toString().substring(0, 8));
+            
+            logger.info("Payment {} completed successfully after {} polls", paymentId, payment.pollCount);
+            
+            // Remove from tracker
+            paymentTracker.remove(paymentId);
+            
+            return result;
+        }
     }
 }

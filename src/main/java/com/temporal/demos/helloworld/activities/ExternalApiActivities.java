@@ -20,4 +20,11 @@ public interface ExternalApiActivities {
     
     @ActivityMethod
     String callRecommendationService(String userId);
+    
+    // Async payment service methods using polling pattern
+    @ActivityMethod
+    String initiateAsyncPaymentProcess(String userId, double amount);
+    
+    @ActivityMethod
+    String pollPaymentStatus(String paymentId);
 }

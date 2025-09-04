@@ -27,11 +27,46 @@ The application has been enhanced with:
 - **Backoff Coefficient**: 2.0 (exponential backoff)
 - **Total Timeout**: 45 seconds per activity
 
+## Async Payment Service Pattern
+
+### Server-Side Retries for Polling
+
+The payment service demonstrates an **async API pattern** where:
+
+1. **Initiation**: `initiateAsyncPaymentProcess()` starts a payment on an external system
+2. **Polling**: `pollPaymentStatus()` checks completion status every minute
+3. **Server-Side Retries**: Uses Temporal's retry mechanism for polling instead of workflow loops
+
+### Polling Configuration
+- **Poll Interval**: 1 minute (no backoff coefficient)
+- **Max Polls**: 20 attempts (20 minutes total)
+- **Timeout**: 10 minutes per activity
+- **Pattern**: Server-side retries with exception-based polling
+
+### How It Works
+```java
+// Activity throws exception while payment is processing
+if (paymentStillProcessing) {
+    throw new RuntimeException("Payment still processing, poll #" + pollCount);
+}
+// Returns result when payment completes
+return paymentResult;
+```
+
+This pattern is recommended for:
+- ✅ Async APIs that don't return results immediately
+- ✅ Long-running external processes
+- ✅ Polling without workflow timers
+- ✅ Automatic retry handling
+
+## Error Simulation
+
 ## API Endpoints
 
 ### Core Orchestration Endpoints
 - `POST /api/orchestration/execute` - Start orchestration asynchronously
 - `POST /api/orchestration/execute-sync` - Run orchestration synchronously
+- `POST /api/orchestration/test-async-payment` - Test async payment with polling pattern
 - `GET /api/orchestration/status/{workflowId}` - Check workflow status
 - `GET /api/orchestration/result/{workflowId}` - Get workflow result
 - `GET /api/orchestration/test/{userId}` - Quick test endpoint
@@ -71,6 +106,30 @@ curl http://localhost:8090/api/orchestration/status/{workflowId}
 ```
 
 ### Scenario 3: Comparison Testing
+```bash
+# Test with errors enabled
+curl -X POST http://localhost:8090/api/orchestration/error-simulation/enable
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"userId":"test-with-errors"}' \
+  http://localhost:8090/api/orchestration/execute-sync
+
+# Test without errors
+curl -X POST http://localhost:8090/api/orchestration/error-simulation/disable
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"userId":"test-without-errors"}' \
+  http://localhost:8090/api/orchestration/execute-sync
+```
+```bash
+# Enable errors and test async payment with server-side retries
+curl -X POST http://localhost:8090/api/orchestration/error-simulation/enable
+
+# Test the async payment pattern (takes several minutes)
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"userId":"test-async-payment"}' \
+  http://localhost:8090/api/orchestration/test-async-payment
+
+# Watch logs for polling activity every minute
+```
 ```bash
 # Test with errors enabled
 curl -X POST http://localhost:8090/api/orchestration/error-simulation/enable

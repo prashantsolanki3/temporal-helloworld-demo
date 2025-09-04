@@ -29,8 +29,22 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
                     .build())
             .build();
     
+    // Special configuration for polling activities (server-side retries pattern)
+    private final ActivityOptions pollingActivityOptions = ActivityOptions.newBuilder()
+            .setStartToCloseTimeout(Duration.ofMinutes(10))  // Long timeout for polling
+            .setRetryOptions(RetryOptions.newBuilder()
+                    .setInitialInterval(Duration.ofMinutes(1))     // 1 minute interval between polls
+                    .setMaximumInterval(Duration.ofMinutes(1))     // Keep consistent 1 minute polling
+                    .setBackoffCoefficient(1.0)                    // No backoff for polling
+                    .setMaximumAttempts(20)                        // Allow up to 20 polls (20 minutes max)
+                    .build())
+            .build();
+    
     private final ExternalApiActivities activities = 
             Workflow.newActivityStub(ExternalApiActivities.class, activityOptions);
+    
+    private final ExternalApiActivities pollingActivities = 
+            Workflow.newActivityStub(ExternalApiActivities.class, pollingActivityOptions);
     
     @Override
     public String orchestrateExternalApiCalls(String userId) {
@@ -54,14 +68,24 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
         Promise<String> orderServicePromise = Async.function(activities::callOrderService, userId);
         Promise<String> notificationServicePromise = Async.function(activities::callNotificationService, userId);
         
-        // STEP 3: PaymentService runs sequentially after UserService (simulates dependency on user verification)
-        Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Step 3: Calling PaymentService after user verification (with retries)...");
+        // STEP 3: Async PaymentService - Start payment process and poll for completion
+        Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Step 3: Starting ASYNC PaymentService after user verification...");
         String paymentServiceResult;
         try {
-            paymentServiceResult = activities.callPaymentService(userId);
-            Workflow.getLogger(OrchestrationWorkflowImpl.class).info("PaymentService completed successfully for user: {}", userId);
+            // Step 3a: Initiate async payment process
+            String paymentInitResult = activities.initiateAsyncPaymentProcess(userId, 150.75);
+            Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Async payment initiated for user: {}", userId);
+            
+            // Extract payment ID from the result (simple JSON parsing)
+            String paymentId = extractPaymentId(paymentInitResult);
+            
+            // Step 3b: Poll for payment completion using server-side retries pattern
+            Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Starting polling for payment completion: {}", paymentId);
+            paymentServiceResult = pollingActivities.pollPaymentStatus(paymentId);
+            Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Async PaymentService completed successfully for user: {}", userId);
+            
         } catch (Exception e) {
-            Workflow.getLogger(OrchestrationWorkflowImpl.class).error("PaymentService failed after all retries for user: {}", userId, e);
+            Workflow.getLogger(OrchestrationWorkflowImpl.class).error("Async PaymentService failed for user: {}", userId, e);
             throw e;
         }
         
@@ -116,13 +140,14 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
         compiledResult.append("\"startTime\":\"").append(startTime).append("\",");
         compiledResult.append("\"endTime\":\"").append(endTime).append("\",");
         compiledResult.append("\"totalServices\":").append(allResults.size()).append(",");
-        compiledResult.append("\"executionPattern\":\"mixed-sequential-parallel\",");
+        compiledResult.append("\"executionPattern\":\"mixed-sequential-parallel-with-async-polling\",");
         compiledResult.append("\"executionSteps\":[");
         compiledResult.append("\"1. UserService (sequential - first)\",");
         compiledResult.append("\"2. OrderService + NotificationService (parallel)\",");
-        compiledResult.append("\"3. PaymentService (sequential - after user)\",");
+        compiledResult.append("\"3. AsyncPaymentService (sequential - with polling pattern)\",");
         compiledResult.append("\"4. RecommendationService (sequential - last)\"");
         compiledResult.append("],");
+        compiledResult.append("\"paymentPattern\":\"async-with-server-side-retries\",");
         compiledResult.append("\"services\":[");
         
         // Get results from all services
@@ -141,5 +166,17 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
         Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Orchestration completed for user: {} with compiled result length: {}", userId, finalResult.length());
         
         return finalResult;
+    }
+    
+    /**
+     * Helper method to extract payment ID from JSON result.
+     * In a real implementation, you would use a proper JSON parser.
+     */
+    private String extractPaymentId(String jsonResult) {
+        // Simple string parsing for demo purposes
+        // In production, use Jackson or similar JSON library
+        int startIndex = jsonResult.indexOf("\"paymentId\":\"") + 13;
+        int endIndex = jsonResult.indexOf("\"", startIndex);
+        return jsonResult.substring(startIndex, endIndex);
     }
 }

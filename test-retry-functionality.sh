@@ -41,6 +41,11 @@ echo "3. Running orchestration with error simulation enabled (this may take a wh
 echo "   Watch the application logs to see retry attempts in action!"
 make_request "POST" "/execute-sync" "{\"userId\":\"$USER_ID\"}"
 
+# Step 3b: Test async payment pattern specifically
+echo "3b. Testing ASYNC PAYMENT pattern with polling (may take several minutes)..."
+echo "    This demonstrates server-side retries pattern for polling async services!"
+make_request "POST" "/test-async-payment" "{\"userId\":\"$USER_ID-async\"}"
+
 # Step 4: Check error simulation status again
 echo "4. Checking error simulation status after test..."
 make_request "GET" "/error-simulation/status"
