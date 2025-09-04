@@ -1,5 +1,6 @@
 package com.temporal.demos.helloworld.controllers;
 
+import com.temporal.demos.helloworld.activities.ExternalApiActivitiesImpl;
 import com.temporal.demos.helloworld.config.TemporalConfig;
 import com.temporal.demos.helloworld.workflows.OrchestrationWorkflow;
 import io.temporal.client.WorkflowClient;
@@ -167,6 +168,56 @@ public class OrchestrationController {
         OrchestrationRequest request = new OrchestrationRequest();
         request.setUserId(userId);
         return executeOrchestrationSync(request);
+    }
+    
+    // Error simulation control endpoints for testing retry functionality
+    @PostMapping("/error-simulation/enable")
+    public ResponseEntity<Map<String, Object>> enableErrorSimulation() {
+        ExternalApiActivitiesImpl.setErrorSimulationEnabled(true);
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Error simulation ENABLED - Activities will now randomly throw exceptions to test retry functionality");
+        response.put("errorSimulationEnabled", true);
+        response.put("timestamp", LocalDateTime.now().format(formatter));
+        response.put("retryConfiguration", "5 max attempts, 2s initial interval, 30s max interval, 2.0 backoff coefficient");
+        return ResponseEntity.ok(response);
+    }
+    
+    @PostMapping("/error-simulation/disable")
+    public ResponseEntity<Map<String, Object>> disableErrorSimulation() {
+        ExternalApiActivitiesImpl.setErrorSimulationEnabled(false);
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Error simulation DISABLED - Activities will run normally without random errors");
+        response.put("errorSimulationEnabled", false);
+        response.put("timestamp", LocalDateTime.now().format(formatter));
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/error-simulation/status")
+    public ResponseEntity<Map<String, Object>> getErrorSimulationStatus() {
+        boolean enabled = ExternalApiActivitiesImpl.isErrorSimulationEnabled();
+        Map<String, Object> response = new HashMap<>();
+        response.put("errorSimulationEnabled", enabled);
+        response.put("status", enabled ? "ENABLED" : "DISABLED");
+        response.put("timestamp", LocalDateTime.now().format(formatter));
+        
+        if (enabled) {
+            Map<String, Object> errorRates = new HashMap<>();
+            errorRates.put("UserService", "25% + 15% post-processing");
+            errorRates.put("OrderService", "35%");
+            errorRates.put("PaymentService", "40% + 20% validation");
+            errorRates.put("NotificationService", "20%");
+            errorRates.put("RecommendationService", "30% + 10% ML processing");
+            response.put("errorRates", errorRates);
+            
+            response.put("retryConfiguration", Map.of(
+                "maxAttempts", 5,
+                "initialInterval", "2 seconds",
+                "maxInterval", "30 seconds",
+                "backoffCoefficient", 2.0
+            ));
+        }
+        
+        return ResponseEntity.ok(response);
     }
     
     // Request DTO
