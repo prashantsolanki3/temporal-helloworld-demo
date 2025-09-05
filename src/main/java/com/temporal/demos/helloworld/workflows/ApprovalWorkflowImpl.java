@@ -29,7 +29,6 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
     private String approvalStatus = "PENDING";
     private String currentStep = "SUBMITTED";
     private String requestId;
-    private String requestType;
     private String requestDetails;
     private String requesterEmail;
     private String approverEmail;
@@ -42,16 +41,15 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
     @Override
     public String processApprovalRequest(String requestId, String requestType, String requestDetails, String requesterEmail) {
         this.requestId = requestId;
-        this.requestType = requestType;
         this.requestDetails = requestDetails;
         this.requesterEmail = requesterEmail;
         this.requestStartTime = Instant.ofEpochMilli(Workflow.currentTimeMillis());
         
-        logger.info("Starting approval process for request: {}", requestId);
+        logger.info("Starting approval process for access request: {}", requestId);
         
         // Step 1: Validate request
         currentStep = "VALIDATING";
-        String validationResult = activities.validateRequest(requestId, requestType, requestDetails);
+        String validationResult = activities.validateRequest(requestId, requestDetails);
         
         if (!"VALID".equals(validationResult)) {
             currentStep = "REJECTED_VALIDATION";
@@ -62,7 +60,7 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
         
         // Step 2: Notify approvers
         currentStep = "AWAITING_APPROVAL";
-        activities.notifyApprovers(requestId, requestType, requestDetails, requesterEmail);
+        activities.notifyApprovers(requestId, requestDetails, requesterEmail);
         
         // Step 3: Wait for approval/rejection (24 hour timeout)
         logger.info("Waiting for approval decision for request: {}", requestId);
@@ -109,14 +107,14 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
         currentStep = "APPROVED";
         approvalStatus = "APPROVED";
         
-        String executionResult = activities.executeApprovedAction(requestId, requestType, requestDetails);
+        String executionResult = activities.executeApprovedAction(requestId, requestDetails);
         
         activities.notifyRequester(requesterEmail, 
-                String.format("Request approved by %s. Comments: %s", approverEmail, approvalComments));
+                String.format("Access request approved by %s. Comments: %s", approverEmail, approvalComments));
         activities.logApprovalDecision(requestId, "APPROVED", approverEmail, approvalComments);
         
         currentStep = "COMPLETED";
-        return String.format("Request approved by %s. Result: %s", approverEmail, executionResult);
+        return String.format("Access request approved by %s. Result: %s", approverEmail, executionResult);
     }
     
     private String processRejection() {
@@ -124,11 +122,11 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
         approvalStatus = "REJECTED";
         
         activities.notifyRequester(requesterEmail, 
-                String.format("Request rejected by %s. Reason: %s", approverEmail, rejectionReason));
+                String.format("Access request rejected by %s. Reason: %s", approverEmail, rejectionReason));
         activities.logApprovalDecision(requestId, "REJECTED", approverEmail, rejectionReason);
         
         currentStep = "COMPLETED";
-        return String.format("Request rejected by %s. Reason: %s", approverEmail, rejectionReason);
+        return String.format("Access request rejected by %s. Reason: %s", approverEmail, rejectionReason);
     }
     
     @Override
@@ -138,8 +136,8 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
     
     @Override
     public String getRequestDetails() {
-        return String.format("Request ID: %s, Type: %s, Details: %s, Requester: %s", 
-                requestId, requestType, requestDetails, requesterEmail);
+        return String.format("Request ID: %s, Type: ACCESS_REQUEST, Details: %s, Requester: %s", 
+                requestId, requestDetails, requesterEmail);
     }
     
     @Override

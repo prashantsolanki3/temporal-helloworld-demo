@@ -34,13 +34,14 @@ public class ApprovalController {
         
         WorkflowClient.start(workflow::processApprovalRequest, 
                 request.getRequestId(), 
-                request.getRequestType(), 
+                "ACCESS_REQUEST", // Fixed type for demo
                 request.getRequestDetails(), 
                 request.getRequesterEmail());
         
         Map<String, Object> response = new HashMap<>();
         response.put("workflowId", workflowId);
         response.put("requestId", request.getRequestId());
+        response.put("requestType", "ACCESS_REQUEST");
         response.put("status", "SUBMITTED");
         
         return ResponseEntity.ok(response);
@@ -159,16 +160,12 @@ public class ApprovalController {
     // Request DTOs
     public static class ApprovalRequest {
         private String requestId;
-        private String requestType;
         private String requestDetails;
         private String requesterEmail;
         
         // Getters and setters
         public String getRequestId() { return requestId; }
         public void setRequestId(String requestId) { this.requestId = requestId; }
-        
-        public String getRequestType() { return requestType; }
-        public void setRequestType(String requestType) { this.requestType = requestType; }
         
         public String getRequestDetails() { return requestDetails; }
         public void setRequestDetails(String requestDetails) { this.requestDetails = requestDetails; }

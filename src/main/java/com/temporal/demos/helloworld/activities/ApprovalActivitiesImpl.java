@@ -6,54 +6,47 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Random;
 
 @Component
 public class ApprovalActivitiesImpl implements ApprovalActivities {
     
     private static final Logger logger = LoggerFactory.getLogger(ApprovalActivitiesImpl.class);
-    private static final List<String> VALID_REQUEST_TYPES = Arrays.asList(
-            "BUDGET_REQUEST", "PERSONNEL_CHANGE", "SYSTEM_ACCESS", "PROCUREMENT", "POLICY_EXCEPTION"
-    );
     
     @Override
-    public String validateRequest(String requestId, String requestType, String requestDetails) {
-        logger.info("Validating request: {} of type: {}", requestId, requestType);
+    public String validateRequest(String requestId, String requestDetails) {
+        logger.info("Validating access request: {}", requestId);
         
         if (requestId == null || requestId.trim().isEmpty()) {
             return "Invalid request ID";
-        }
-        
-        if (!VALID_REQUEST_TYPES.contains(requestType)) {
-            return "Invalid request type. Valid types: " + String.join(", ", VALID_REQUEST_TYPES);
         }
         
         if (requestDetails == null || requestDetails.trim().length() < 10) {
             return "Request details must be at least 10 characters long";
         }
         
+        // Simulate validation processing time
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
         
-        logger.info("Request {} validated successfully", requestId);
+        logger.info("Access request {} validated successfully", requestId);
         return "VALID";
     }
     
     @Override
-    public void notifyApprovers(String requestId, String requestType, String requestDetails, String requesterEmail) {
-        logger.info("Notifying approvers for request: {} from: {}", requestId, requesterEmail);
+    public void notifyApprovers(String requestId, String requestDetails, String requesterEmail) {
+        logger.info("Notifying approvers for access request: {} from: {}", requestId, requesterEmail);
         
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-        String message = String.format("NEW APPROVAL REQUEST - ID: %s, Type: %s, Requester: %s, Submitted: %s", 
-                requestId, requestType, requesterEmail, timestamp);
+        String message = String.format("NEW ACCESS REQUEST - ID: %s, Requester: %s, Details: %s, Submitted: %s", 
+                requestId, requesterEmail, requestDetails, timestamp);
         
         logger.info("Approval notification sent: {}", message);
         
+        // Simulate notification processing time
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
@@ -78,43 +71,21 @@ public class ApprovalActivitiesImpl implements ApprovalActivities {
     }
     
     @Override
-    public String executeApprovedAction(String requestId, String requestType, String requestDetails) {
-        logger.info("Executing approved action for request: {} of type: {}", requestId, requestType);
+    public String executeApprovedAction(String requestId, String requestDetails) {
+        logger.info("Executing approved access request: {}", requestId);
         
-        String result;
-        Random random = new Random();
-        
+        // Simulate access provisioning
         try {
-            switch (requestType) {
-                case "BUDGET_REQUEST":
-                    Thread.sleep(3000);
-                    result = "Budget allocated. Reference: BUDGET-" + System.currentTimeMillis();
-                    break;
-                case "PERSONNEL_CHANGE":
-                    Thread.sleep(2000);
-                    result = "Personnel record updated. Employee ID: EMP-" + random.nextInt(10000);
-                    break;
-                case "SYSTEM_ACCESS":
-                    Thread.sleep(1500);
-                    result = "System access granted. Access token: TOK-" + random.nextInt(100000);
-                    break;
-                case "PROCUREMENT":
-                    Thread.sleep(4000);
-                    result = "Purchase order created. PO Number: PO-" + System.currentTimeMillis();
-                    break;
-                case "POLICY_EXCEPTION":
-                    Thread.sleep(1000);
-                    result = "Exception granted. Exception ID: EXC-" + random.nextInt(1000);
-                    break;
-                default:
-                    result = "Action executed with generic handler";
-            }
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            result = "Execution interrupted";
+            return "Execution interrupted";
         }
         
-        logger.info("Action executed for request: {} with result: {}", requestId, result);
+        Random random = new Random();
+        String result = "Access granted. Access token: TOK-" + random.nextInt(100000);
+        
+        logger.info("Access granted for request: {} with result: {}", requestId, result);
         return result;
     }
     

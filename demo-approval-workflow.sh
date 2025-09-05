@@ -35,13 +35,12 @@ fi
 echo -e "${GREEN}✅ Application is running${NC}"
 echo ""
 
-echo -e "${BLUE}Step 1: Submitting an approval request...${NC}"
+echo -e "${BLUE}Step 1: Submitting an access request...${NC}"
 RESPONSE=$(curl -s -X POST $BASE_URL/request \
   -H "Content-Type: application/json" \
   -d '{
-    "requestId": "REQ-DEMO-001",
-    "requestType": "BUDGET_REQUEST",
-    "requestDetails": "Need $75,000 for new development server infrastructure and CI/CD tools",
+    "requestId": "REQ-ACCESS-001",
+    "requestDetails": "Need access to production database for urgent customer data analysis",
     "requesterEmail": "developer@company.com"
   }')
 
@@ -56,7 +55,7 @@ if [ -z "$WORKFLOW_ID" ]; then
     exit 1
 fi
 
-echo -e "${GREEN}✅ Approval request submitted successfully!${NC}"
+echo -e "${GREEN}✅ Access request submitted successfully!${NC}"
 echo -e "${YELLOW}Workflow ID: $WORKFLOW_ID${NC}"
 echo ""
 
@@ -80,8 +79,8 @@ echo ""
 # Interactive decision making
 echo -e "${BLUE}Step 5: Human Decision Required${NC}"
 echo -e "${YELLOW}What would you like to do?${NC}"
-echo "1) Approve the request"
-echo "2) Reject the request"
+echo "1) Approve the access request"
+echo "2) Reject the access request"
 echo "3) Check status and wait"
 echo ""
 read -p "Enter your choice (1-3): " CHOICE
@@ -94,13 +93,13 @@ case $CHOICE in
         # Get approver email
         read -p "Enter approver email (or press Enter for default): " APPROVER_EMAIL
         if [ -z "$APPROVER_EMAIL" ]; then
-            APPROVER_EMAIL="manager@company.com"
+            APPROVER_EMAIL="security-manager@company.com"
         fi
         
         # Get approval comments
         read -p "Enter approval comments (or press Enter for default): " APPROVAL_COMMENTS
         if [ -z "$APPROVAL_COMMENTS" ]; then
-            APPROVAL_COMMENTS="Approved for Q4 infrastructure budget. Critical for team productivity."
+            APPROVAL_COMMENTS="Approved for emergency access. Please revoke after analysis is complete."
         fi
         
         APPROVAL_RESPONSE=$(curl -s -X POST $BASE_URL/approve/$WORKFLOW_ID \
@@ -122,13 +121,13 @@ case $CHOICE in
         # Get approver email
         read -p "Enter approver email (or press Enter for default): " APPROVER_EMAIL
         if [ -z "$APPROVER_EMAIL" ]; then
-            APPROVER_EMAIL="manager@company.com"
+            APPROVER_EMAIL="security-manager@company.com"
         fi
         
         # Get rejection reason
         read -p "Enter rejection reason (or press Enter for default): " REJECTION_REASON
         if [ -z "$REJECTION_REASON" ]; then
-            REJECTION_REASON="Budget not available for this quarter. Please resubmit in Q1 next year."
+            REJECTION_REASON="Access request denied. Please submit request through proper security channels."
         fi
         
         REJECTION_RESPONSE=$(curl -s -X POST $BASE_URL/reject/$WORKFLOW_ID \
@@ -151,8 +150,8 @@ case $CHOICE in
         echo ""
         echo -e "${YELLOW}⏳ Workflow is still waiting for approval. You can run this script again or use the API directly.${NC}"
         echo -e "${BLUE}Manual approval commands:${NC}"
-        echo "Approve: curl -X POST $BASE_URL/approve/$WORKFLOW_ID -H \"Content-Type: application/json\" -d '{\"approverEmail\": \"manager@company.com\", \"comments\": \"Your comments\"}'"
-        echo "Reject:  curl -X POST $BASE_URL/reject/$WORKFLOW_ID -H \"Content-Type: application/json\" -d '{\"approverEmail\": \"manager@company.com\", \"reason\": \"Your reason\"}'"
+        echo "Approve: curl -X POST $BASE_URL/approve/$WORKFLOW_ID -H \"Content-Type: application/json\" -d '{\"approverEmail\": \"security-manager@company.com\", \"comments\": \"Your comments\"}'"
+        echo "Reject:  curl -X POST $BASE_URL/reject/$WORKFLOW_ID -H \"Content-Type: application/json\" -d '{\"approverEmail\": \"security-manager@company.com\", \"reason\": \"Your reason\"}'"
         exit 0
         ;;
         
@@ -178,11 +177,11 @@ echo ""
 echo -e "${GREEN}🎉 Interactive demo completed successfully!${NC}"
 echo ""
 echo -e "${YELLOW}📋 Summary of what happened:${NC}"
-echo "1. ✅ Submitted approval request to Temporal workflow"
+echo "1. ✅ Submitted access request to Temporal workflow"
 echo "2. ✅ Workflow validated request and notified approvers"
 echo "3. ✅ Workflow waited for human decision (you!)"
 echo "4. ✅ Human signal was sent to workflow"
-echo "5. ✅ Workflow processed decision and executed business logic"
+echo "5. ✅ Workflow processed decision and granted/denied access"
 echo "6. ✅ Final result was returned"
 echo ""
 echo -e "${YELLOW}Key Temporal Concepts Demonstrated:${NC}"
@@ -195,9 +194,9 @@ echo "• 🎯 Complete workflow orchestration with activities"
 echo ""
 
 echo -e "${BLUE}🔄 Want to test more scenarios?${NC}"
-echo "• Run this script again for another approval workflow"
-echo "• Try different request types: BUDGET_REQUEST, PERSONNEL_CHANGE, SYSTEM_ACCESS, PROCUREMENT, POLICY_EXCEPTION"
+echo "• Run this script again for another access request workflow"
 echo "• Test the timeout feature by not making a decision (24-hour timeout)"
+echo "• Try different request details and see how the workflow handles them"
 echo ""
 
 echo -e "${BLUE}🔧 Direct API Usage:${NC}"
