@@ -25,7 +25,7 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
                     .build()
     );
     
-    // Workflow state
+    // Simplified workflow state
     private String approvalStatus = "PENDING";
     private String currentStep = "SUBMITTED";
     private String requestId;
@@ -49,7 +49,7 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
         
         logger.info("Starting approval process for request: {}", requestId);
         
-        // Step 1: Validate and prepare request
+        // Step 1: Validate request
         currentStep = "VALIDATING";
         String validationResult = activities.validateRequest(requestId, requestType, requestDetails);
         
@@ -60,57 +60,30 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
             return "Request rejected during validation: " + validationResult;
         }
         
-        // Step 2: Send notification to approvers
+        // Step 2: Notify approvers
         currentStep = "AWAITING_APPROVAL";
         activities.notifyApprovers(requestId, requestType, requestDetails, requesterEmail);
         
-        // Step 3: Wait for human approval/rejection (with timeout)
+        // Step 3: Wait for approval/rejection (24 hour timeout)
         logger.info("Waiting for approval decision for request: {}", requestId);
         
-        // Wait for either approval or rejection signal, or timeout after 24 hours
         boolean decisionReceived = Workflow.await(
                 Duration.ofHours(24),
                 () -> approvalReceived || rejectionReceived
         );
         
         if (!decisionReceived) {
-            // Timeout occurred
             currentStep = "TIMEOUT";
             approvalStatus = "TIMEOUT";
             activities.notifyRequester(requesterEmail, "Request timed out after 24 hours without approval");
-            activities.notifyApprovers(requestId, requestType, "TIMEOUT - Request expired", requesterEmail);
             return "Request timed out after 24 hours";
         }
         
-        // Process the decision
+        // Process decision
         if (approvalReceived) {
-            currentStep = "APPROVED";
-            approvalStatus = "APPROVED";
-            
-            // Execute approved action
-            String executionResult = activities.executeApprovedAction(requestId, requestType, requestDetails);
-            
-            // Notify stakeholders
-            activities.notifyRequester(requesterEmail, 
-                    String.format("Request approved by %s. Comments: %s. Execution result: %s", 
-                            approverEmail, approvalComments, executionResult));
-            activities.logApprovalDecision(requestId, "APPROVED", approverEmail, approvalComments);
-            
-            currentStep = "COMPLETED";
-            return String.format("Request approved and executed successfully. Approver: %s, Result: %s", 
-                    approverEmail, executionResult);
-            
+            return processApproval();
         } else if (rejectionReceived) {
-            currentStep = "REJECTED";
-            approvalStatus = "REJECTED";
-            
-            // Notify stakeholders
-            activities.notifyRequester(requesterEmail, 
-                    String.format("Request rejected by %s. Reason: %s", approverEmail, rejectionReason));
-            activities.logApprovalDecision(requestId, "REJECTED", approverEmail, rejectionReason);
-            
-            currentStep = "COMPLETED";
-            return String.format("Request rejected by %s. Reason: %s", approverEmail, rejectionReason);
+            return processRejection();
         }
         
         return "Unexpected workflow state";
@@ -130,6 +103,32 @@ public class ApprovalWorkflowImpl implements ApprovalWorkflow {
         this.approverEmail = approverEmail;
         this.rejectionReason = reason != null ? reason : "No reason provided";
         this.rejectionReceived = true;
+    }
+    
+    private String processApproval() {
+        currentStep = "APPROVED";
+        approvalStatus = "APPROVED";
+        
+        String executionResult = activities.executeApprovedAction(requestId, requestType, requestDetails);
+        
+        activities.notifyRequester(requesterEmail, 
+                String.format("Request approved by %s. Comments: %s", approverEmail, approvalComments));
+        activities.logApprovalDecision(requestId, "APPROVED", approverEmail, approvalComments);
+        
+        currentStep = "COMPLETED";
+        return String.format("Request approved by %s. Result: %s", approverEmail, executionResult);
+    }
+    
+    private String processRejection() {
+        currentStep = "REJECTED";
+        approvalStatus = "REJECTED";
+        
+        activities.notifyRequester(requesterEmail, 
+                String.format("Request rejected by %s. Reason: %s", approverEmail, rejectionReason));
+        activities.logApprovalDecision(requestId, "REJECTED", approverEmail, rejectionReason);
+        
+        currentStep = "COMPLETED";
+        return String.format("Request rejected by %s. Reason: %s", approverEmail, rejectionReason);
     }
     
     @Override

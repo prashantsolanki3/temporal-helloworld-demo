@@ -41,8 +41,21 @@ public class TemporalConfig {
     @DependsOn("workerFactory")
     public Worker worker(WorkerFactory workerFactory) {
         Worker worker = workerFactory.newWorker(TASK_QUEUE);
-        worker.registerWorkflowImplementationTypes(HelloWorldWorkflowImpl.class, ApprovalWorkflowImpl.class, OrchestrationWorkflowImpl.class);
-        worker.registerActivitiesImplementations(new HelloWorldActivitiesImpl(), new ApprovalActivitiesImpl(), new ExternalApiActivitiesImpl());
+        
+        // Register workflow implementations
+        worker.registerWorkflowImplementationTypes(
+            HelloWorldWorkflowImpl.class, 
+            ApprovalWorkflowImpl.class, 
+            OrchestrationWorkflowImpl.class
+        );
+        
+        // Register activity implementations
+        worker.registerActivitiesImplementations(
+            new HelloWorldActivitiesImpl(), 
+            new ApprovalActivitiesImpl(), 
+            new ExternalApiActivitiesImpl()
+        );
+        
         workerFactory.start();
         return worker;
     }

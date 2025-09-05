@@ -21,6 +21,10 @@ public interface ExternalApiActivities {
     @ActivityMethod
     String callRecommendationService(String userId);
     
+    // Sync payment processing
+    @ActivityMethod
+    String processSyncPayment(String userId, double amount);
+    
     // Async payment service methods using polling pattern
     @ActivityMethod
     String initiateAsyncPaymentProcess(String userId, double amount);

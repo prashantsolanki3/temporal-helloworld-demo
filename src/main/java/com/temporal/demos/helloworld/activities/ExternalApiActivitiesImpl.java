@@ -25,12 +25,11 @@ public class ExternalApiActivitiesImpl implements ExternalApiActivities {
         INITIATED, PROCESSING, COMPLETED, FAILED
     }
     
-    // Simplified payment status for async tracking
     private static class PaymentStatus {
         PaymentState state;
-        @SuppressWarnings("unused") // Stored for potential future use in demo
+        @SuppressWarnings("unused")
         String userId;
-        @SuppressWarnings("unused") // Stored for potential future use in demo  
+        @SuppressWarnings("unused")
         double amount;
         int pollCount;
         

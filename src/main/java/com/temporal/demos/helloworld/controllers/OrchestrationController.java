@@ -10,8 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,13 +21,10 @@ public class OrchestrationController {
     @Autowired
     private WorkflowClient workflowClient;
     
-    private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    
     @PostMapping("/execute")
     public ResponseEntity<Map<String, Object>> executeOrchestration(@RequestBody OrchestrationRequest request) {
         String workflowId = "orchestration-" + UUID.randomUUID().toString();
         
-        // Create workflow stub
         OrchestrationWorkflow workflow = workflowClient.newWorkflowStub(
                 OrchestrationWorkflow.class,
                 WorkflowOptions.newBuilder()
@@ -38,15 +33,13 @@ public class OrchestrationController {
                         .build()
         );
         
-        // Start workflow asynchronously
         WorkflowClient.start(workflow::orchestrateExternalApiCalls, request.getUserId(), request.isUseAsyncPayment());
         
         Map<String, Object> response = new HashMap<>();
         response.put("workflowId", workflowId);
         response.put("userId", request.getUserId());
         response.put("status", "STARTED");
-        response.put("startTime", LocalDateTime.now().format(formatter));
-        response.put("message", "Orchestration workflow started successfully. Use workflowId to track progress or get results.");
+        response.put("message", "Orchestration workflow started successfully");
         
         return ResponseEntity.ok(response);
     }
@@ -54,10 +47,8 @@ public class OrchestrationController {
     @PostMapping("/execute-sync")
     public ResponseEntity<Map<String, Object>> executeOrchestrationSync(@RequestBody OrchestrationRequest request) {
         String workflowId = "orchestration-sync-" + UUID.randomUUID().toString();
-        String startTime = LocalDateTime.now().format(formatter);
         
         try {
-            // Create workflow stub
             OrchestrationWorkflow workflow = workflowClient.newWorkflowStub(
                     OrchestrationWorkflow.class,
                     WorkflowOptions.newBuilder()
@@ -66,30 +57,21 @@ public class OrchestrationController {
                             .build()
             );
             
-            // Execute workflow synchronously and wait for result
             String result = workflow.orchestrateExternalApiCalls(request.getUserId(), request.isUseAsyncPayment());
-            String endTime = LocalDateTime.now().format(formatter);
             
             Map<String, Object> response = new HashMap<>();
             response.put("workflowId", workflowId);
             response.put("userId", request.getUserId());
             response.put("status", "COMPLETED");
-            response.put("startTime", startTime);
-            response.put("endTime", endTime);
             response.put("result", result);
-            response.put("message", "Orchestration completed successfully");
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("workflowId", workflowId);
-            errorResponse.put("userId", request.getUserId());
             errorResponse.put("status", "FAILED");
-            errorResponse.put("startTime", startTime);
-            errorResponse.put("endTime", LocalDateTime.now().format(formatter));
-            errorResponse.put("error", "Orchestration failed");
-            errorResponse.put("details", e.getMessage());
+            errorResponse.put("error", e.getMessage());
             
             return ResponseEntity.internalServerError().body(errorResponse);
         }
@@ -98,26 +80,20 @@ public class OrchestrationController {
     @GetMapping("/status/{workflowId}")
     public ResponseEntity<Map<String, Object>> getOrchestrationStatus(@PathVariable String workflowId) {
         try {
-            // Get workflow stub by ID
             OrchestrationWorkflow workflow = workflowClient.newWorkflowStub(OrchestrationWorkflow.class, workflowId);
             WorkflowStub workflowStub = WorkflowStub.fromTyped(workflow);
             
             Map<String, Object> response = new HashMap<>();
             response.put("workflowId", workflowId);
-            response.put("checkTime", LocalDateTime.now().format(formatter));
             
-            // Check if workflow is completed
             try {
-                // Try to get result without blocking (this will throw if workflow is still running)
                 String result = workflowStub.getResult(String.class);
                 response.put("status", "COMPLETED");
                 response.put("completed", true);
                 response.put("result", result);
             } catch (Exception e) {
-                // Workflow is still running
                 response.put("status", "RUNNING");
                 response.put("completed", false);
-                response.put("message", "Orchestration is still in progress");
             }
             
             return ResponseEntity.ok(response);
@@ -126,7 +102,6 @@ public class OrchestrationController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to get workflow status");
             errorResponse.put("workflowId", workflowId);
-            errorResponse.put("details", e.getMessage());
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
@@ -135,20 +110,15 @@ public class OrchestrationController {
     @GetMapping("/result/{workflowId}")
     public ResponseEntity<Map<String, Object>> getOrchestrationResult(@PathVariable String workflowId) {
         try {
-            // Get workflow stub by ID
             OrchestrationWorkflow workflow = workflowClient.newWorkflowStub(OrchestrationWorkflow.class, workflowId);
             WorkflowStub workflowStub = WorkflowStub.fromTyped(workflow);
             
-            // Get the final result (this will block until workflow completes)
             String result = workflowStub.getResult(String.class);
             
             Map<String, Object> response = new HashMap<>();
             response.put("workflowId", workflowId);
             response.put("status", "COMPLETED");
-            response.put("completed", true);
-            response.put("retrievedTime", LocalDateTime.now().format(formatter));
             response.put("result", result);
-            response.put("message", "Orchestration completed successfully");
             
             return ResponseEntity.ok(response);
             
@@ -156,7 +126,6 @@ public class OrchestrationController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to get workflow result");
             errorResponse.put("workflowId", workflowId);
-            errorResponse.put("details", e.getMessage());
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
@@ -179,15 +148,12 @@ public class OrchestrationController {
         return executeOrchestrationSync(request);
     }
     
-    // Error simulation control endpoints for testing retry functionality
     @PostMapping("/error-simulation/enable")
     public ResponseEntity<Map<String, Object>> enableErrorSimulation() {
         ExternalApiActivitiesImpl.setErrorSimulationEnabled(true);
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Error simulation ENABLED - Activities will now randomly throw exceptions to test retry functionality");
+        response.put("message", "Error simulation ENABLED");
         response.put("errorSimulationEnabled", true);
-        response.put("timestamp", LocalDateTime.now().format(formatter));
-        response.put("retryConfiguration", "5 max attempts, 2s initial interval, 30s max interval, 2.0 backoff coefficient");
         return ResponseEntity.ok(response);
     }
     
@@ -195,9 +161,8 @@ public class OrchestrationController {
     public ResponseEntity<Map<String, Object>> disableErrorSimulation() {
         ExternalApiActivitiesImpl.setErrorSimulationEnabled(false);
         Map<String, Object> response = new HashMap<>();
-        response.put("message", "Error simulation DISABLED - Activities will run normally without random errors");
+        response.put("message", "Error simulation DISABLED");
         response.put("errorSimulationEnabled", false);
-        response.put("timestamp", LocalDateTime.now().format(formatter));
         return ResponseEntity.ok(response);
     }
     
@@ -207,25 +172,6 @@ public class OrchestrationController {
         Map<String, Object> response = new HashMap<>();
         response.put("errorSimulationEnabled", enabled);
         response.put("status", enabled ? "ENABLED" : "DISABLED");
-        response.put("timestamp", LocalDateTime.now().format(formatter));
-        
-        if (enabled) {
-            Map<String, Object> errorRates = new HashMap<>();
-            errorRates.put("UserService", "25% + 15% post-processing");
-            errorRates.put("OrderService", "35%");
-            errorRates.put("PaymentService", "40% + 20% validation");
-            errorRates.put("NotificationService", "20%");
-            errorRates.put("RecommendationService", "30% + 10% ML processing");
-            response.put("errorRates", errorRates);
-            
-            response.put("retryConfiguration", Map.of(
-                "maxAttempts", 5,
-                "initialInterval", "2 seconds",
-                "maxInterval", "30 seconds",
-                "backoffCoefficient", 2.0
-            ));
-        }
-        
         return ResponseEntity.ok(response);
     }
     

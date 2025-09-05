@@ -24,7 +24,6 @@ public class ApprovalController {
     public ResponseEntity<Map<String, Object>> submitApprovalRequest(@RequestBody ApprovalRequest request) {
         String workflowId = "approval-" + UUID.randomUUID().toString();
         
-        // Create workflow stub
         ApprovalWorkflow workflow = workflowClient.newWorkflowStub(
                 ApprovalWorkflow.class,
                 WorkflowOptions.newBuilder()
@@ -33,7 +32,6 @@ public class ApprovalController {
                         .build()
         );
         
-        // Start workflow asynchronously
         WorkflowClient.start(workflow::processApprovalRequest, 
                 request.getRequestId(), 
                 request.getRequestType(), 
@@ -44,7 +42,6 @@ public class ApprovalController {
         response.put("workflowId", workflowId);
         response.put("requestId", request.getRequestId());
         response.put("status", "SUBMITTED");
-        response.put("message", "Approval request submitted successfully. Use workflowId to track progress.");
         
         return ResponseEntity.ok(response);
     }
@@ -55,17 +52,13 @@ public class ApprovalController {
             @RequestBody ApprovalDecision decision) {
         
         try {
-            // Get workflow stub by ID
             ApprovalWorkflow workflow = workflowClient.newWorkflowStub(ApprovalWorkflow.class, workflowId);
-            
-            // Send approval signal
             workflow.approve(decision.getApproverEmail(), decision.getComments());
             
             Map<String, Object> response = new HashMap<>();
             response.put("workflowId", workflowId);
             response.put("action", "APPROVED");
             response.put("approver", decision.getApproverEmail());
-            response.put("message", "Approval signal sent successfully");
             
             return ResponseEntity.ok(response);
             
@@ -73,7 +66,6 @@ public class ApprovalController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to send approval signal");
             errorResponse.put("workflowId", workflowId);
-            errorResponse.put("details", e.getMessage());
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
@@ -85,17 +77,13 @@ public class ApprovalController {
             @RequestBody ApprovalDecision decision) {
         
         try {
-            // Get workflow stub by ID
             ApprovalWorkflow workflow = workflowClient.newWorkflowStub(ApprovalWorkflow.class, workflowId);
-            
-            // Send rejection signal
             workflow.reject(decision.getApproverEmail(), decision.getReason());
             
             Map<String, Object> response = new HashMap<>();
             response.put("workflowId", workflowId);
             response.put("action", "REJECTED");
             response.put("approver", decision.getApproverEmail());
-            response.put("message", "Rejection signal sent successfully");
             
             return ResponseEntity.ok(response);
             
@@ -103,7 +91,6 @@ public class ApprovalController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to send rejection signal");
             errorResponse.put("workflowId", workflowId);
-            errorResponse.put("details", e.getMessage());
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
@@ -112,32 +99,24 @@ public class ApprovalController {
     @GetMapping("/status/{workflowId}")
     public ResponseEntity<Map<String, Object>> getApprovalStatus(@PathVariable String workflowId) {
         try {
-            // Get workflow stub by ID
             ApprovalWorkflow workflow = workflowClient.newWorkflowStub(ApprovalWorkflow.class, workflowId);
             
-            // Query workflow state
             String status = workflow.getApprovalStatus();
             String currentStep = workflow.getCurrentStep();
-            String requestDetails = workflow.getRequestDetails();
             long waitingTime = workflow.getWaitingTimeInSeconds();
             
             Map<String, Object> response = new HashMap<>();
             response.put("workflowId", workflowId);
             response.put("status", status);
             response.put("currentStep", currentStep);
-            response.put("requestDetails", requestDetails);
             response.put("waitingTimeSeconds", waitingTime);
-            response.put("waitingTimeMinutes", waitingTime / 60);
             
-            // Check if workflow is completed
             WorkflowStub workflowStub = WorkflowStub.fromTyped(workflow);
             try {
-                // Try to get result without blocking (this will throw if workflow is still running)
                 String result = workflowStub.getResult(String.class);
                 response.put("completed", true);
                 response.put("result", result);
             } catch (Exception e) {
-                // Workflow is still running
                 response.put("completed", false);
             }
             
@@ -147,11 +126,6 @@ public class ApprovalController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to get workflow status");
             errorResponse.put("workflowId", workflowId);
-            errorResponse.put("details", e.getMessage());
-            errorResponse.put("exceptionType", e.getClass().getSimpleName());
-            
-            // Print stack trace for debugging
-            e.printStackTrace();
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
@@ -160,11 +134,9 @@ public class ApprovalController {
     @GetMapping("/result/{workflowId}")
     public ResponseEntity<Map<String, Object>> getApprovalResult(@PathVariable String workflowId) {
         try {
-            // Get workflow stub by ID
             ApprovalWorkflow workflow = workflowClient.newWorkflowStub(ApprovalWorkflow.class, workflowId);
             WorkflowStub workflowStub = WorkflowStub.fromTyped(workflow);
             
-            // Get the final result (this will block until workflow completes)
             String result = workflowStub.getResult(String.class);
             
             Map<String, Object> response = new HashMap<>();
@@ -179,7 +151,6 @@ public class ApprovalController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("error", "Failed to get workflow result");
             errorResponse.put("workflowId", workflowId);
-            errorResponse.put("details", e.getMessage());
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
