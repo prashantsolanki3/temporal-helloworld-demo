@@ -156,11 +156,11 @@ public class ApprovalController {
                     ApprovalWorkflow workflow = workflowClient.newWorkflowStub(ApprovalWorkflow.class, workflowId);
                     statusResponse.put("approvalStatus", workflow.getApprovalStatus());
                     statusResponse.put("currentStep", workflow.getCurrentStep());
-                    statusResponse.put("waitingTimeSeconds", workflow.getWaitingTimeInSeconds());
                     statusResponse.put("requestDetails", workflow.getRequestDetails());
                 } catch (Exception e) {
                     // If queries fail, still return execution status
                     statusResponse.put("queryError", "Unable to query workflow details: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
             
