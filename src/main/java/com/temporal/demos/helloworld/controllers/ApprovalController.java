@@ -1,6 +1,8 @@
 package com.temporal.demos.helloworld.controllers;
 
 import com.temporal.demos.helloworld.config.TemporalConfig;
+import com.temporal.demos.helloworld.models.ApprovalDecision;
+import com.temporal.demos.helloworld.models.ApprovalRequest;
 import com.temporal.demos.helloworld.workflows.ApprovalWorkflow;
 import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
@@ -226,38 +228,5 @@ public class ApprovalController {
             
             return ResponseEntity.badRequest().body(errorResponse);
         }
-    }
-    
-    // Request DTOs
-    public static class ApprovalRequest {
-        private String requestId;
-        private String requestDetails;
-        private String requesterEmail;
-        
-        // Getters and setters
-        public String getRequestId() { return requestId; }
-        public void setRequestId(String requestId) { this.requestId = requestId; }
-        
-        public String getRequestDetails() { return requestDetails; }
-        public void setRequestDetails(String requestDetails) { this.requestDetails = requestDetails; }
-        
-        public String getRequesterEmail() { return requesterEmail; }
-        public void setRequesterEmail(String requesterEmail) { this.requesterEmail = requesterEmail; }
-    }
-    
-    public static class ApprovalDecision {
-        private String approverEmail;
-        private String comments;
-        private String reason;
-        
-        // Getters and setters
-        public String getApproverEmail() { return approverEmail; }
-        public void setApproverEmail(String approverEmail) { this.approverEmail = approverEmail; }
-        
-        public String getComments() { return comments; }
-        public void setComments(String comments) { this.comments = comments; }
-        
-        public String getReason() { return reason; }
-        public void setReason(String reason) { this.reason = reason; }
     }
 }

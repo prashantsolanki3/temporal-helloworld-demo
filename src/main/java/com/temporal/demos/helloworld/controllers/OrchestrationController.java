@@ -2,6 +2,7 @@ package com.temporal.demos.helloworld.controllers;
 
 import com.temporal.demos.helloworld.activities.ExternalApiActivitiesImpl;
 import com.temporal.demos.helloworld.config.TemporalConfig;
+import com.temporal.demos.helloworld.models.OrchestrationRequest;
 import com.temporal.demos.helloworld.workflows.OrchestrationWorkflow;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowOptions;
@@ -134,17 +135,13 @@ public class OrchestrationController {
     // Quick test endpoint that doesn't require a request body
     @GetMapping("/test/{userId}")
     public ResponseEntity<Map<String, Object>> testOrchestration(@PathVariable String userId) {
-        OrchestrationRequest request = new OrchestrationRequest();
-        request.setUserId(userId);
-        request.setUseAsyncPayment(false); // Default to sync payment
+        OrchestrationRequest request = new OrchestrationRequest(userId, false);
         return executeOrchestrationSync(request);
     }
     
     @GetMapping("/test-async/{userId}")
     public ResponseEntity<Map<String, Object>> testAsyncOrchestration(@PathVariable String userId) {
-        OrchestrationRequest request = new OrchestrationRequest();
-        request.setUserId(userId);
-        request.setUseAsyncPayment(true); // Use async payment
+        OrchestrationRequest request = new OrchestrationRequest(userId, true);
         return executeOrchestrationSync(request);
     }
     
@@ -175,16 +172,5 @@ public class OrchestrationController {
         return ResponseEntity.ok(response);
     }
     
-    // Request DTO
-    public static class OrchestrationRequest {
-        private String userId;
-        private boolean useAsyncPayment = false; // Default to synchronous payment
-        
-        // Getters and setters
-        public String getUserId() { return userId; }
-        public void setUserId(String userId) { this.userId = userId; }
-        
-        public boolean isUseAsyncPayment() { return useAsyncPayment; }
-        public void setUseAsyncPayment(boolean useAsyncPayment) { this.useAsyncPayment = useAsyncPayment; }
-    }
+  
 }
