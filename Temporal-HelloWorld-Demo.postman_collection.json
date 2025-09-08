@@ -1,0 +1,537 @@
+{
+	"info": {
+		"_postman_id": "temporal-helloworld-demo-collection",
+		"name": "Temporal HelloWorld Demo API",
+		"description": "Complete API collection for testing the Temporal HelloWorld Demo application. This collection includes endpoints for HelloWorld workflows, Approval workflows, and Orchestration workflows with error simulation capabilities.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8090",
+			"type": "string"
+		},
+		{
+			"key": "workflowId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "HelloWorld Endpoints",
+			"description": "Basic HelloWorld workflow endpoints for testing simple Temporal workflows",
+			"item": [
+				{
+					"name": "Say Hello (GET)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/hello?name=Temporal User",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"hello"
+							],
+							"query": [
+								{
+									"key": "name",
+									"value": "Temporal User",
+									"description": "Name parameter (optional, defaults to 'World')"
+								}
+							]
+						},
+						"description": "Executes a simple HelloWorld workflow with optional name parameter"
+					},
+					"response": []
+				},
+				{
+					"name": "Say Hello (POST)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Temporal User from POST\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/hello",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"hello"
+							]
+						},
+						"description": "Executes a HelloWorld workflow using POST request with JSON body"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Approval Workflow",
+			"description": "Approval workflow endpoints for testing complex approval processes with signals",
+			"item": [
+				{
+					"name": "Submit Approval Request",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    pm.collectionVariables.set('workflowId', responseJson.workflowId);",
+									"    pm.test('Response contains workflowId', function () {",
+									"        pm.expect(responseJson).to.have.property('workflowId');",
+									"    });",
+									"    pm.test('Status is SUBMITTED', function () {",
+									"        pm.expect(responseJson.status).to.eql('SUBMITTED');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"requestId\": \"REQ-001\",\n    \"requestDetails\": \"Access request for production database\",\n    \"requesterEmail\": \"user@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/approval/request",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"approval",
+								"request"
+							]
+						},
+						"description": "Submits a new approval request and starts the approval workflow"
+					},
+					"response": []
+				},
+				{
+					"name": "Approve Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"approverEmail\": \"manager@example.com\",\n    \"comments\": \"Approved for legitimate business need\",\n    \"reason\": \"User requires access for critical project\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/approval/approve/{{workflowId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"approval",
+								"approve",
+								"{{workflowId}}"
+							]
+						},
+						"description": "Sends approval signal to the workflow. Use workflowId from previous request."
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"approverEmail\": \"manager@example.com\",\n    \"comments\": \"Rejected due to security concerns\",\n    \"reason\": \"Insufficient justification for access level requested\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/approval/reject/{{workflowId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"approval",
+								"reject",
+								"{{workflowId}}"
+							]
+						},
+						"description": "Sends rejection signal to the workflow. Use workflowId from previous request."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Approval Status",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    pm.test('Response contains executionStatus', function () {",
+									"        pm.expect(responseJson).to.have.property('executionStatus');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/approval/status/{{workflowId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"approval",
+								"status",
+								"{{workflowId}}"
+							]
+						},
+						"description": "Gets the current status of the approval workflow including execution status and custom workflow state"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Approval Result",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/approval/result/{{workflowId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"approval",
+								"result",
+								"{{workflowId}}"
+							]
+						},
+						"description": "Gets the final result of a completed approval workflow"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Orchestration Workflow",
+			"description": "Orchestration workflow endpoints for testing complex multi-step workflows with external API calls",
+			"item": [
+				{
+					"name": "Execute Orchestration (Async)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    pm.collectionVariables.set('workflowId', responseJson.workflowId);",
+									"    pm.test('Status is STARTED', function () {",
+									"        pm.expect(responseJson.status).to.eql('STARTED');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"user123\",\n    \"useAsyncPayment\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"execute"
+							]
+						},
+						"description": "Starts an orchestration workflow asynchronously and returns immediately"
+					},
+					"response": []
+				},
+				{
+					"name": "Execute Orchestration (Sync)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": \"user456\",\n    \"useAsyncPayment\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/execute-sync",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"execute-sync"
+							]
+						},
+						"description": "Executes an orchestration workflow synchronously and waits for completion"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Orchestration Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/status/{{workflowId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"status",
+								"{{workflowId}}"
+							]
+						},
+						"description": "Gets the current status of the orchestration workflow"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Orchestration Result",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/result/{{workflowId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"result",
+								"{{workflowId}}"
+							]
+						},
+						"description": "Gets the final result of a completed orchestration workflow"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Orchestration (Simple)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/test/testuser123",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"test",
+								"testuser123"
+							]
+						},
+						"description": "Quick test endpoint for orchestration with synchronous payment"
+					},
+					"response": []
+				},
+				{
+					"name": "Test Async Orchestration",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/test-async/testuser456",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"test-async",
+								"testuser456"
+							]
+						},
+						"description": "Quick test endpoint for orchestration with asynchronous payment"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Error Simulation",
+			"description": "Endpoints for controlling error simulation during testing",
+			"item": [
+				{
+					"name": "Enable Error Simulation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/error-simulation/enable",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"error-simulation",
+								"enable"
+							]
+						},
+						"description": "Enables error simulation for testing retry and failure scenarios"
+					},
+					"response": []
+				},
+				{
+					"name": "Disable Error Simulation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/error-simulation/disable",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"error-simulation",
+								"disable"
+							]
+						},
+						"description": "Disables error simulation for normal operation"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Error Simulation Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/error-simulation/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"error-simulation",
+								"status"
+							]
+						},
+						"description": "Gets the current status of error simulation"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
