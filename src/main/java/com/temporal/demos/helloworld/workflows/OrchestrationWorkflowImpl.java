@@ -26,12 +26,12 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
     
     // Polling configuration for async payments
     private final ActivityOptions pollingActivityOptions = ActivityOptions.newBuilder()
-            .setStartToCloseTimeout(Duration.ofMinutes(10))
+            .setStartToCloseTimeout(Duration.ofMinutes(5))
             .setRetryOptions(RetryOptions.newBuilder()
-                    .setInitialInterval(Duration.ofMinutes(1))
-                    .setMaximumInterval(Duration.ofMinutes(1))
-                    .setBackoffCoefficient(1.0)
-                    .setMaximumAttempts(20)
+                    .setInitialInterval(Duration.ofSeconds(2))
+                    .setMaximumInterval(Duration.ofSeconds(30))
+                    .setBackoffCoefficient(2.0)
+                    .setMaximumAttempts(10)
                     .build())
             .build();
     
