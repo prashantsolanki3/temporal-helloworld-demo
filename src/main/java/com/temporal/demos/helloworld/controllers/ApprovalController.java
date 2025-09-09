@@ -3,13 +3,11 @@ package com.temporal.demos.helloworld.controllers;
 import com.temporal.demos.helloworld.config.TemporalConfig;
 import com.temporal.demos.helloworld.models.ApprovalDecision;
 import com.temporal.demos.helloworld.models.ApprovalRequest;
-import com.temporal.demos.helloworld.utils.WorkflowStatusUtil;
 import com.temporal.demos.helloworld.utils.WorkflowUtil;
 import com.temporal.demos.helloworld.workflows.ApprovalWorkflow;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionAlreadyStarted;
 import io.temporal.client.WorkflowOptions;
-import io.temporal.client.WorkflowStub;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -123,26 +121,10 @@ public class ApprovalController {
 
     @GetMapping("/result/{workflowId}")
     public ResponseEntity<Map<String, Object>> getApprovalResult(@PathVariable String workflowId) {
-        try {
+        return WorkflowUtil.getWorkflowResult(workflowClient, workflowId, response -> {
+            // Add approval-specific data
             ApprovalWorkflow workflow = workflowClient.newWorkflowStub(ApprovalWorkflow.class, workflowId);
-            WorkflowStub workflowStub = WorkflowStub.fromTyped(workflow);
-
-            String result = workflowStub.getResult(String.class);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("workflowId", workflowId);
-            response.put("completed", true);
-            response.put("result", result);
             response.put("finalStatus", workflow.getApprovalStatus());
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to get workflow result");
-            errorResponse.put("workflowId", workflowId);
-
-            return ResponseEntity.badRequest().body(errorResponse);
-        }
+        });
     }
 }

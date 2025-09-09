@@ -3,13 +3,11 @@ package com.temporal.demos.helloworld.controllers;
 import com.temporal.demos.helloworld.activities.ExternalApiActivitiesImpl;
 import com.temporal.demos.helloworld.config.TemporalConfig;
 import com.temporal.demos.helloworld.models.OrchestrationRequest;
-import com.temporal.demos.helloworld.utils.WorkflowStatusUtil;
 import com.temporal.demos.helloworld.utils.WorkflowUtil;
 import com.temporal.demos.helloworld.workflows.OrchestrationWorkflow;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionAlreadyStarted;
 import io.temporal.client.WorkflowOptions;
-import io.temporal.client.WorkflowStub;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -97,26 +95,10 @@ public class OrchestrationController {
 
     @GetMapping("/result/{workflowId}")
     public ResponseEntity<Map<String, Object>> getOrchestrationResult(@PathVariable String workflowId) {
-        try {
-            OrchestrationWorkflow workflow = workflowClient.newWorkflowStub(OrchestrationWorkflow.class, workflowId);
-            WorkflowStub workflowStub = WorkflowStub.fromTyped(workflow);
-
-            String result = workflowStub.getResult(String.class);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("workflowId", workflowId);
+        return WorkflowUtil.getWorkflowResult(workflowClient, workflowId, response -> {
+            // Add orchestration-specific data - set status to COMPLETED for consistency
             response.put("status", "COMPLETED");
-            response.put("result", result);
-
-            return ResponseEntity.ok(response);
-
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to get workflow result");
-            errorResponse.put("workflowId", workflowId);
-
-            return ResponseEntity.badRequest().body(errorResponse);
-        }
+        });
     }
 
     @PostMapping("/error-simulation/enable")

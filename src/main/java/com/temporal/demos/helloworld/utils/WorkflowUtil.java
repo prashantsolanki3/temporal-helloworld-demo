@@ -138,4 +138,65 @@ public class WorkflowUtil {
             String workflowId) {
         return getWorkflowStatus(workflowClient, workflowId, null);
     }
+
+    /**
+     * Gets workflow result information by waiting for completion.
+     * 
+     * @param workflowClient The Temporal workflow client
+     * @param workflowId The workflow ID to get result for
+     * @param additionalDataHandler Optional handler for adding workflow-specific data to the response
+     * @return ResponseEntity with workflow result information
+     */
+    public static ResponseEntity<Map<String, Object>> getWorkflowResult(
+            WorkflowClient workflowClient, 
+            String workflowId,
+            Consumer<Map<String, Object>> additionalDataHandler) {
+        
+        try {
+            WorkflowStub workflowStub = workflowClient.newUntypedWorkflowStub(workflowId);
+            String result = workflowStub.getResult(String.class);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("workflowId", workflowId);
+            response.put("completed", true);
+            response.put("result", result);
+
+            // Add any workflow-specific data if handler provided
+            if (additionalDataHandler != null) {
+                try {
+                    additionalDataHandler.accept(response);
+                } catch (Exception e) {
+                    response.put("additionalDataError", "Unable to get additional workflow data: " + e.getMessage());
+                }
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to get workflow result");
+            errorResponse.put("workflowId", workflowId);
+
+            // Check if it's a workflow not found error
+            if (e.getMessage().contains("not found") || e.getMessage().contains("NotFound")) {
+                errorResponse.put("errorType", "WORKFLOW_NOT_FOUND");
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
+    }
+
+    /**
+     * Overloaded method for simple workflow result retrieval without additional data.
+     * 
+     * @param workflowClient The Temporal workflow client
+     * @param workflowId The workflow ID to get result for
+     * @return ResponseEntity with workflow result information
+     */
+    public static ResponseEntity<Map<String, Object>> getWorkflowResult(
+            WorkflowClient workflowClient, 
+            String workflowId) {
+        return getWorkflowResult(workflowClient, workflowId, null);
+    }
 }
