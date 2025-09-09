@@ -10,7 +10,7 @@ logging:
     io.temporal: INFO
     com.temporal.demos.helloworld: DEBUG
   pattern:
-    console: '%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n'
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 # Management endpoints for health checks
 management:

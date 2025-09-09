@@ -23,16 +23,17 @@ public class WorkflowUtil {
     /**
      * Gets workflow status information asynchronously without blocking.
      * 
-     * @param workflowClient The Temporal workflow client
-     * @param workflowId The workflow ID to check
-     * @param runningWorkflowHandler Optional handler for additional queries when workflow is running
+     * @param workflowClient         The Temporal workflow client
+     * @param workflowId             The workflow ID to check
+     * @param runningWorkflowHandler Optional handler for additional queries when
+     *                               workflow is running
      * @return ResponseEntity with workflow status information
      */
     public static ResponseEntity<Map<String, Object>> getWorkflowStatus(
-            WorkflowClient workflowClient, 
+            WorkflowClient workflowClient,
             String workflowId,
             Consumer<Map<String, Object>> runningWorkflowHandler) {
-        
+
         try {
             // Create workflow execution reference
             WorkflowExecution execution = WorkflowExecution.newBuilder()
@@ -75,8 +76,8 @@ public class WorkflowUtil {
             }
 
             // Handle running workflows with custom handler if provided
-            if (executionStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING 
-                && runningWorkflowHandler != null) {
+            if (executionStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_RUNNING
+                    && runningWorkflowHandler != null) {
                 try {
                     runningWorkflowHandler.accept(statusResponse);
                 } catch (Exception e) {
@@ -127,31 +128,34 @@ public class WorkflowUtil {
     }
 
     /**
-     * Overloaded method for simple workflow status checking without custom running workflow handling.
+     * Overloaded method for simple workflow status checking without custom running
+     * workflow handling.
      * 
      * @param workflowClient The Temporal workflow client
-     * @param workflowId The workflow ID to check
+     * @param workflowId     The workflow ID to check
      * @return ResponseEntity with workflow status information
      */
     public static ResponseEntity<Map<String, Object>> getWorkflowStatus(
-            WorkflowClient workflowClient, 
+            WorkflowClient workflowClient,
             String workflowId) {
         return getWorkflowStatus(workflowClient, workflowId, null);
     }
 
     /**
-     * Gets workflow result information non-blocking - returns status if not completed, result if completed.
+     * Gets workflow result information non-blocking - returns status if not
+     * completed, result if completed.
      * 
-     * @param workflowClient The Temporal workflow client
-     * @param workflowId The workflow ID to get result for
-     * @param additionalDataHandler Optional handler for adding workflow-specific data to the response
+     * @param workflowClient        The Temporal workflow client
+     * @param workflowId            The workflow ID to get result for
+     * @param additionalDataHandler Optional handler for adding workflow-specific
+     *                              data to the response
      * @return ResponseEntity with workflow result or status information
      */
     public static ResponseEntity<Map<String, Object>> getWorkflowResult(
-            WorkflowClient workflowClient, 
+            WorkflowClient workflowClient,
             String workflowId,
             Consumer<Map<String, Object>> additionalDataHandler) {
-        
+
         try {
             // Create workflow execution reference
             WorkflowExecution execution = WorkflowExecution.newBuilder()
@@ -200,13 +204,14 @@ public class WorkflowUtil {
                     String result = workflowStub.getResult(String.class);
                     resultResponse.put("result", result);
                     resultResponse.put("completed", true);
-                    
+
                     // Add any workflow-specific data if handler provided
                     if (additionalDataHandler != null) {
                         try {
                             additionalDataHandler.accept(resultResponse);
                         } catch (Exception e) {
-                            resultResponse.put("additionalDataError", "Unable to get additional workflow data: " + e.getMessage());
+                            resultResponse.put("additionalDataError",
+                                    "Unable to get additional workflow data: " + e.getMessage());
                         }
                     }
                 } catch (Exception e) {
@@ -217,7 +222,7 @@ public class WorkflowUtil {
                 // Workflow is not completed yet - return status information
                 resultResponse.put("completed", false);
                 resultResponse.put("message", "Workflow is not completed yet");
-                
+
                 // Add failure information if workflow failed
                 if (executionStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED) {
                     try {
@@ -247,14 +252,15 @@ public class WorkflowUtil {
     }
 
     /**
-     * Overloaded method for simple workflow result retrieval without additional data.
+     * Overloaded method for simple workflow result retrieval without additional
+     * data.
      * 
      * @param workflowClient The Temporal workflow client
-     * @param workflowId The workflow ID to get result for
+     * @param workflowId     The workflow ID to get result for
      * @return ResponseEntity with workflow result information
      */
     public static ResponseEntity<Map<String, Object>> getWorkflowResult(
-            WorkflowClient workflowClient, 
+            WorkflowClient workflowClient,
             String workflowId) {
         return getWorkflowResult(workflowClient, workflowId, null);
     }

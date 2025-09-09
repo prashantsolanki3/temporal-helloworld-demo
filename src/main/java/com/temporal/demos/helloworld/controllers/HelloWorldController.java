@@ -12,10 +12,10 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api")
 public class HelloWorldController {
-    
+
     @Autowired
     private WorkflowClient workflowClient;
-    
+
     @GetMapping("/hello")
     public String sayHello(@RequestParam(defaultValue = "World") String name) {
         // Create a workflow stub
@@ -24,13 +24,12 @@ public class HelloWorldController {
                 WorkflowOptions.newBuilder()
                         .setWorkflowId("hello-world-" + UUID.randomUUID())
                         .setTaskQueue(TemporalConfig.TASK_QUEUE)
-                        .build()
-        );
-        
+                        .build());
+
         // Execute the workflow
         return workflow.executeHelloWorld(name);
     }
-    
+
     @PostMapping("/hello")
     public String sayHelloPost(@RequestBody HelloRequest request) {
         // Create a workflow stub
@@ -39,20 +38,19 @@ public class HelloWorldController {
                 WorkflowOptions.newBuilder()
                         .setWorkflowId("hello-world-" + UUID.randomUUID())
                         .setTaskQueue(TemporalConfig.TASK_QUEUE)
-                        .build()
-        );
-        
+                        .build());
+
         // Execute the workflow
         return workflow.executeHelloWorld(request.getName());
     }
-    
+
     public static class HelloRequest {
         private String name;
-        
+
         public String getName() {
             return name;
         }
-        
+
         public void setName(String name) {
             this.name = name;
         }

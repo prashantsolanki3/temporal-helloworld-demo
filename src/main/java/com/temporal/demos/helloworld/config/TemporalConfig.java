@@ -17,45 +17,43 @@ import com.temporal.demos.helloworld.workflows.OrchestrationWorkflowImpl;
 
 @Configuration
 public class TemporalConfig {
-    
+
     public static final String TASK_QUEUE = "HelloWorldTaskQueue";
-    
+
     @Bean
     public WorkflowServiceStubs workflowServiceStubs() {
         return WorkflowServiceStubs.newLocalServiceStubs();
     }
-    
+
     @Bean
     @DependsOn("workflowServiceStubs")
     public WorkflowClient workflowClient(WorkflowServiceStubs serviceStubs) {
         return WorkflowClient.newInstance(serviceStubs);
     }
-    
+
     @Bean
     @DependsOn("workflowClient")
     public WorkerFactory workerFactory(WorkflowClient workflowClient) {
         return WorkerFactory.newInstance(workflowClient);
     }
-    
+
     @Bean
     @DependsOn("workerFactory")
     public Worker worker(WorkerFactory workerFactory) {
         Worker worker = workerFactory.newWorker(TASK_QUEUE);
-        
+
         // Register workflow implementations
         worker.registerWorkflowImplementationTypes(
-            HelloWorldWorkflowImpl.class, 
-            ApprovalWorkflowImpl.class, 
-            OrchestrationWorkflowImpl.class
-        );
-        
+                HelloWorldWorkflowImpl.class,
+                ApprovalWorkflowImpl.class,
+                OrchestrationWorkflowImpl.class);
+
         // Register activity implementations
         worker.registerActivitiesImplementations(
-            new HelloWorldActivitiesImpl(), 
-            new ApprovalActivitiesImpl(), 
-            new ExternalApiActivitiesImpl()
-        );
-        
+                new HelloWorldActivitiesImpl(),
+                new ApprovalActivitiesImpl(),
+                new ExternalApiActivitiesImpl());
+
         workerFactory.start();
         return worker;
     }

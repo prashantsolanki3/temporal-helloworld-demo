@@ -8,7 +8,6 @@ public class ApprovalRequest {
     private String requestDetails;
     private String requesterEmail;
 
-
     public ApprovalRequest(String requestId, String requestDetails, String requesterEmail) {
         this.requestId = requestId;
         this.requestDetails = requestDetails;
@@ -22,6 +21,7 @@ public class ApprovalRequest {
     public String getRequestDetails() {
         return requestDetails;
     }
+
     public String getRequesterEmail() {
         return requesterEmail;
     }

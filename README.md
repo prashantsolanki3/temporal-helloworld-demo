@@ -59,6 +59,7 @@ docker-compose up -d
 ```
 
 This will start:
+
 - PostgreSQL database (port 5432)
 - Temporal server (port 7233)
 - Temporal Web UI (port 8080)
@@ -87,11 +88,13 @@ The application will start on port `8090`.
 ### GET Endpoint
 
 Test with default name "World":
+
 ```bash
 curl http://localhost:8090/api/hello
 ```
 
 Test with custom name:
+
 ```bash
 curl "http://localhost:8090/api/hello?name=Alice"
 ```
@@ -99,6 +102,7 @@ curl "http://localhost:8090/api/hello?name=Alice"
 ### POST Endpoint
 
 Test with JSON payload:
+
 ```bash
 curl -X POST \
   http://localhost:8090/api/hello \
@@ -109,6 +113,7 @@ curl -X POST \
 ## Expected Response
 
 The workflow will execute two activities and return a combined greeting:
+
 ```
 Hello, Alice! Welcome to Temporal, Alice!
 ```
@@ -116,6 +121,7 @@ Hello, Alice! Welcome to Temporal, Alice!
 ## Monitoring
 
 Monitor workflow execution in the Temporal Web UI:
+
 1. Open `http://localhost:8080` in your browser
 2. Look for workflows in the `default` namespace
 3. Search for workflow IDs starting with `hello-world-`
@@ -133,23 +139,28 @@ Monitor workflow execution in the Temporal Web UI:
 ### Components
 
 #### Activities (`HelloWorldActivities`)
+
 - `sayHello(String name)`: Returns a simple greeting
 - `createGreeting(String greeting, String name)`: Creates a custom greeting
 
 #### Workflow (`HelloWorldWorkflow`)
+
 - `executeHelloWorld(String name)`: Orchestrates the activities and returns the combined result
 
 #### Controller (`HelloWorldController`)
+
 - `GET /api/hello`: Triggers workflow with query parameter
 - `POST /api/hello`: Triggers workflow with JSON body
 
 #### Configuration (`TemporalConfig`)
+
 - Manual Spring configuration for Temporal client and workers
 - No dependency on alpha Spring Boot starter
 
 ## Configuration
 
 The application uses:
+
 - **Application port**: 8090
 - **Temporal server**: localhost:7233 (via Docker Compose)
 - **Task queue**: HelloWorldTaskQueue
@@ -186,6 +197,7 @@ docker-compose down -v
 ## Next Steps
 
 This POC can be extended with:
+
 - Production-ready database configuration
 - SSL/TLS security
 - Workflow versioning

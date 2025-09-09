@@ -5,7 +5,7 @@ import io.temporal.workflow.WorkflowMethod;
 
 @WorkflowInterface
 public interface HelloWorldWorkflow {
-    
+
     @WorkflowMethod
     String executeHelloWorld(String name);
 }

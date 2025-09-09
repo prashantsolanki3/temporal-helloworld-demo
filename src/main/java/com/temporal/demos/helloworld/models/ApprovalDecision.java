@@ -18,9 +18,11 @@ public class ApprovalDecision {
     public String getApproverEmail() {
         return approverEmail;
     }
+
     public String getComments() {
         return comments;
     }
+
     public String getReason() {
         return reason;
     }
