@@ -76,22 +76,6 @@ public class ExternalApiActivitiesImpl implements ExternalApiActivities {
     }
     
     @Override
-    public String callPaymentService(String userId) {
-        logger.info("Starting PaymentService call for user: {}", userId);
-        
-        if (errorSimulationEnabled) {
-            RandomErrorGenerator.maybeThrowError(30, "PaymentService");
-        }
-        
-        simulateApiCall(3000, 6000);
-        
-        String result = String.format("{\"service\":\"PaymentService\",\"userId\":\"%s\",\"defaultMethod\":\"**** 1234\",\"creditScore\":750}", userId);
-        
-        logger.info("Completed PaymentService call for user: {}", userId);
-        return result;
-    }
-    
-    @Override
     public String callNotificationService(String userId) {
         logger.info("Starting NotificationService call for user: {}", userId);
         
@@ -145,24 +129,21 @@ public class ExternalApiActivitiesImpl implements ExternalApiActivities {
     
     // Payment Service Implementation (Sync and Async versions)
     
-    /**
-     * Synchronous payment processing - completes immediately
-     */
-    public String processSyncPayment(String userId, double amount) {
-        logger.info("Processing synchronous payment for user: {}, amount: ${}", userId, amount);
+
+    // Sync payment processing
+    @Override
+    public String callPaymentService(String userId) {
+        logger.info("Starting PaymentService call for user: {}", userId);
         
         if (errorSimulationEnabled) {
-            RandomErrorGenerator.maybeThrowError(20, "SyncPaymentService");
+            RandomErrorGenerator.maybeThrowError(30, "PaymentService");
         }
         
-        simulateApiCall(2000, 5000);
+        simulateApiCall(3000, 6000);
         
-        String transactionId = "txn-" + UUID.randomUUID().toString().substring(0, 8);
-        String result = String.format(
-                "{\"service\":\"SyncPaymentService\",\"userId\":\"%s\",\"amount\":%.2f,\"status\":\"COMPLETED\",\"transactionId\":\"%s\"}",
-                userId, amount, transactionId);
+        String result = String.format("{\"service\":\"PaymentService\",\"userId\":\"%s\",\"defaultMethod\":\"**** 1234\",\"creditScore\":750}", userId);
         
-        logger.info("Synchronous payment completed for user: {}, transactionId: {}", userId, transactionId);
+        logger.info("Completed PaymentService call for user: {}", userId);
         return result;
     }
     
@@ -183,8 +164,8 @@ public class ExternalApiActivitiesImpl implements ExternalApiActivities {
         PaymentStatus paymentStatus = new PaymentStatus(userId, amount);
         paymentTracker.put(paymentId, paymentStatus);
         
-        // Simulate random payment processing time (2-6 poll cycles)
-        int pollsToComplete = ThreadLocalRandom.current().nextInt(2, 7);
+        // Simulate random payment processing time (1-3 poll cycles)
+        int pollsToComplete = ThreadLocalRandom.current().nextInt(1, 4);
         paymentStatus.pollCount = -pollsToComplete;
         
         String result = String.format(
