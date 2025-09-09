@@ -140,12 +140,12 @@ public class WorkflowUtil {
     }
 
     /**
-     * Gets workflow result information by waiting for completion.
+     * Gets workflow result information non-blocking - returns status if not completed, result if completed.
      * 
      * @param workflowClient The Temporal workflow client
      * @param workflowId The workflow ID to get result for
      * @param additionalDataHandler Optional handler for adding workflow-specific data to the response
-     * @return ResponseEntity with workflow result information
+     * @return ResponseEntity with workflow result or status information
      */
     public static ResponseEntity<Map<String, Object>> getWorkflowResult(
             WorkflowClient workflowClient, 
@@ -153,28 +153,87 @@ public class WorkflowUtil {
             Consumer<Map<String, Object>> additionalDataHandler) {
         
         try {
-            WorkflowStub workflowStub = workflowClient.newUntypedWorkflowStub(workflowId);
-            String result = workflowStub.getResult(String.class);
+            // Create workflow execution reference
+            WorkflowExecution execution = WorkflowExecution.newBuilder()
+                    .setWorkflowId(workflowId)
+                    .build();
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("workflowId", workflowId);
-            response.put("completed", true);
-            response.put("result", result);
+            // Create describe request
+            DescribeWorkflowExecutionRequest request = DescribeWorkflowExecutionRequest.newBuilder()
+                    .setNamespace(workflowClient.getOptions().getNamespace())
+                    .setExecution(execution)
+                    .build();
 
-            // Add any workflow-specific data if handler provided
-            if (additionalDataHandler != null) {
+            // Get workflow service stubs
+            WorkflowServiceStubs serviceStubs = workflowClient.getWorkflowServiceStubs();
+
+            // Describe workflow execution
+            DescribeWorkflowExecutionResponse response = serviceStubs.blockingStub()
+                    .describeWorkflowExecution(request);
+
+            // Get workflow execution info
+            var workflowExecutionInfo = response.getWorkflowExecutionInfo();
+            WorkflowExecutionStatus executionStatus = workflowExecutionInfo.getStatus();
+
+            Map<String, Object> resultResponse = new HashMap<>();
+            resultResponse.put("workflowId", workflowId);
+            resultResponse.put("executionStatus", executionStatus.name());
+            resultResponse.put("workflowType", workflowExecutionInfo.getType().getName());
+
+            // Add timing information
+            if (workflowExecutionInfo.hasStartTime()) {
+                resultResponse.put("startTime", Instant.ofEpochSecond(
+                        workflowExecutionInfo.getStartTime().getSeconds(),
+                        workflowExecutionInfo.getStartTime().getNanos()).toString());
+            }
+
+            if (workflowExecutionInfo.hasCloseTime()) {
+                resultResponse.put("closeTime", Instant.ofEpochSecond(
+                        workflowExecutionInfo.getCloseTime().getSeconds(),
+                        workflowExecutionInfo.getCloseTime().getNanos()).toString());
+            }
+
+            // If workflow is completed, get the result
+            if (executionStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_COMPLETED) {
                 try {
-                    additionalDataHandler.accept(response);
+                    WorkflowStub workflowStub = workflowClient.newUntypedWorkflowStub(workflowId);
+                    String result = workflowStub.getResult(String.class);
+                    resultResponse.put("result", result);
+                    resultResponse.put("completed", true);
+                    
+                    // Add any workflow-specific data if handler provided
+                    if (additionalDataHandler != null) {
+                        try {
+                            additionalDataHandler.accept(resultResponse);
+                        } catch (Exception e) {
+                            resultResponse.put("additionalDataError", "Unable to get additional workflow data: " + e.getMessage());
+                        }
+                    }
                 } catch (Exception e) {
-                    response.put("additionalDataError", "Unable to get additional workflow data: " + e.getMessage());
+                    resultResponse.put("resultError", "Unable to get workflow result: " + e.getMessage());
+                    resultResponse.put("completed", true); // Status says completed, but result retrieval failed
+                }
+            } else {
+                // Workflow is not completed yet - return status information
+                resultResponse.put("completed", false);
+                resultResponse.put("message", "Workflow is not completed yet");
+                
+                // Add failure information if workflow failed
+                if (executionStatus == WorkflowExecutionStatus.WORKFLOW_EXECUTION_STATUS_FAILED) {
+                    try {
+                        WorkflowStub workflowStub = workflowClient.newUntypedWorkflowStub(workflowId);
+                        workflowStub.getResult(String.class);
+                    } catch (Exception failureException) {
+                        resultResponse.put("failure", failureException.getMessage());
+                    }
                 }
             }
 
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(resultResponse);
 
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to get workflow result");
+            errorResponse.put("error", "Failed to get workflow result or status: " + e.getMessage());
             errorResponse.put("workflowId", workflowId);
 
             // Check if it's a workflow not found error
