@@ -68,7 +68,7 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
         String orderServiceResult = orderServicePromise.get();
         String notificationServiceResult = notificationServicePromise.get();
         
-        // Step 5: RecommendationService (runs last)
+        // Step 5: RecommendationService
         String recommendationServiceResult = activities.callRecommendationService(userId);
         
         Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Orchestration completed for user: {}", userId);
