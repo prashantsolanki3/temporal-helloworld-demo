@@ -1,26 +1,14 @@
 {
 	"info": {
-		"_postman_id": "temporal-helloworld-demo-collection",
+		"_postman_id": "f469bebd-2d79-4dc6-a356-5110e76c1cc1",
 		"name": "Temporal HelloWorld Demo API",
 		"description": "Complete API collection for testing the Temporal HelloWorld Demo application. This collection includes endpoints for HelloWorld workflows, Approval workflows, and Orchestration workflows with error simulation capabilities.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "27757"
 	},
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://localhost:8090",
-			"type": "string"
-		},
-		{
-			"key": "workflowId",
-			"value": "",
-			"type": "string"
-		}
-	],
 	"item": [
 		{
 			"name": "HelloWorld Endpoints",
-			"description": "Basic HelloWorld workflow endpoints for testing simple Temporal workflows",
 			"item": [
 				{
 					"name": "Say Hello (GET)",
@@ -83,11 +71,11 @@
 					},
 					"response": []
 				}
-			]
+			],
+			"description": "Basic HelloWorld workflow endpoints for testing simple Temporal workflows"
 		},
 		{
 			"name": "Approval Workflow",
-			"description": "Approval workflow endpoints for testing complex approval processes with signals",
 			"item": [
 				{
 					"name": "Submit Approval Request",
@@ -263,11 +251,11 @@
 					},
 					"response": []
 				}
-			]
+			],
+			"description": "Approval workflow endpoints for testing complex approval processes with signals"
 		},
 		{
 			"name": "Orchestration Workflow",
-			"description": "Orchestration workflow endpoints for testing complex multi-step workflows with external API calls",
 			"item": [
 				{
 					"name": "Execute Orchestration (Async)",
@@ -284,7 +272,8 @@
 									"    });",
 									"}"
 								],
-								"type": "text/javascript"
+								"type": "text/javascript",
+								"packages": {}
 							}
 						}
 					],
@@ -299,7 +288,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"userId\": \"user123\",\n    \"useAsyncPayment\": false\n}"
+							"raw": "{\n    \"userId\": \"user123\",\n    \"useAsyncPayment\": true,\n    \"requestId\": \"REQ-123-ASYNC\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/orchestration/execute",
@@ -329,7 +318,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"userId\": \"user456\",\n    \"useAsyncPayment\": true\n}"
+							"raw": "{\n    \"userId\": \"user456\",\n    \"useAsyncPayment\": true,\n    \"requestId\": \"REQ-456-SYNC\"\n}"
 						},
 						"url": {
 							"raw": "{{baseUrl}}/api/orchestration/execute-sync",
@@ -387,54 +376,12 @@
 						"description": "Gets the final result of a completed orchestration workflow"
 					},
 					"response": []
-				},
-				{
-					"name": "Test Orchestration (Simple)",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/orchestration/test/testuser123",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"orchestration",
-								"test",
-								"testuser123"
-							]
-						},
-						"description": "Quick test endpoint for orchestration with synchronous payment"
-					},
-					"response": []
-				},
-				{
-					"name": "Test Async Orchestration",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{baseUrl}}/api/orchestration/test-async/testuser456",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"api",
-								"orchestration",
-								"test-async",
-								"testuser456"
-							]
-						},
-						"description": "Quick test endpoint for orchestration with asynchronous payment"
-					},
-					"response": []
 				}
-			]
+			],
+			"description": "Orchestration workflow endpoints for testing complex multi-step workflows with external API calls"
 		},
 		{
 			"name": "Error Simulation",
-			"description": "Endpoints for controlling error simulation during testing",
 			"item": [
 				{
 					"name": "Enable Error Simulation",
@@ -511,7 +458,8 @@
 					},
 					"response": []
 				}
-			]
+			],
+			"description": "Endpoints for controlling error simulation during testing"
 		}
 	],
 	"event": [
@@ -532,6 +480,18 @@
 					""
 				]
 			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8090",
+			"type": "string"
+		},
+		{
+			"key": "workflowId",
+			"value": "",
+			"type": "string"
 		}
 	]
 }

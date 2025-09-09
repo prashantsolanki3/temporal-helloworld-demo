@@ -48,14 +48,15 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
         // Step 1: UserService (runs first)
         String userServiceResult = activities.callUserService(userId);
         
-        // Step 2: Parallel services
+        // Step 2: Async Parallel services
         Promise<String> orderServicePromise = Async.function(activities::callOrderService, userId);
         Promise<String> notificationServicePromise = Async.function(activities::callNotificationService, userId);
         
         // Step 3: PaymentService
         String paymentServiceResult;
         if (useAsyncPayment) {
-            // Async payment with polling
+            // Async payment with polling, this can also be done with Promise and Async
+            // to demonstrate different patterns
             String paymentInitResult = activities.initiateAsyncPaymentProcess(userId, 150.75);
             String paymentId = extractPaymentId(paymentInitResult);
             paymentServiceResult = pollingActivities.pollPaymentStatus(paymentId);
@@ -64,11 +65,11 @@ public class OrchestrationWorkflowImpl implements OrchestrationWorkflow {
             paymentServiceResult = activities.callPaymentService(userId);
         }
         
-        // Step 4: Wait for parallel services
+        // Step 4: Wait for parallel services to complete
         String orderServiceResult = orderServicePromise.get();
         String notificationServiceResult = notificationServicePromise.get();
         
-        // Step 5: RecommendationService
+        // Step 5: RecommendationService - Starts after the parallel services complete.
         String recommendationServiceResult = activities.callRecommendationService(userId);
         
         Workflow.getLogger(OrchestrationWorkflowImpl.class).info("Orchestration completed for user: {}", userId);

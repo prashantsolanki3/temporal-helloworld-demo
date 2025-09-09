@@ -43,6 +43,7 @@ public class OrchestrationController {
         response.put("userId", request.getUserId());
 
         try {
+            // Async Execution
             WorkflowClient.start(workflow::orchestrateExternalApiCalls, request.getUserId(),
                     request.isUseAsyncPayment());
             response.put("status", "STARTED");
@@ -57,8 +58,13 @@ public class OrchestrationController {
     }
 
     @PostMapping("/execute-sync")
-    public ResponseEntity<Map<String, Object>> executeOrchestrationSync(@RequestBody OrchestrationRequest request) {
-        String workflowId = "orchestration-sync-" + UUID.randomUUID().toString();
+    public ResponseEntity<Map<String, Object>> executeOrchestrationSync(@RequestBody OrchestrationRequest request,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+
+        String stableKey = idempotencyKey != null && !idempotencyKey.isBlank()
+                ? idempotencyKey
+                : request.getRequestId();
+        String workflowId = "approval-" + stableKey;
 
         try {
             OrchestrationWorkflow workflow = workflowClient.newWorkflowStub(
