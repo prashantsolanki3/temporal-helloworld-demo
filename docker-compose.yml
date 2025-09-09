@@ -10,7 +10,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - /var/lib/postgresql/data
+      - ./pg_data:/var/lib/postgresql/data
 
   # Temporal server
   temporal:
