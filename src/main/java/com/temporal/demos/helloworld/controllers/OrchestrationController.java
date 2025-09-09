@@ -4,6 +4,7 @@ import com.temporal.demos.helloworld.activities.ExternalApiActivitiesImpl;
 import com.temporal.demos.helloworld.config.TemporalConfig;
 import com.temporal.demos.helloworld.models.OrchestrationRequest;
 import com.temporal.demos.helloworld.utils.WorkflowStatusUtil;
+import com.temporal.demos.helloworld.utils.WorkflowUtil;
 import com.temporal.demos.helloworld.workflows.OrchestrationWorkflow;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionAlreadyStarted;
@@ -91,7 +92,7 @@ public class OrchestrationController {
 
     @GetMapping("/status/{workflowId}")
     public ResponseEntity<Map<String, Object>> getOrchestrationStatus(@PathVariable String workflowId) {
-        return WorkflowStatusUtil.getWorkflowStatus(workflowClient, workflowId);
+        return WorkflowUtil.getWorkflowStatus(workflowClient, workflowId);
     }
 
     @GetMapping("/result/{workflowId}")

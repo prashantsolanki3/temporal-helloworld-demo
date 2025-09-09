@@ -18,7 +18,7 @@ import java.util.function.Consumer;
  * Utility class for checking workflow status asynchronously.
  * Provides common functionality for workflow status endpoints.
  */
-public class WorkflowStatusUtil {
+public class WorkflowUtil {
 
     /**
      * Gets workflow status information asynchronously without blocking.

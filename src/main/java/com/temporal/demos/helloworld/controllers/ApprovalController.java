@@ -4,6 +4,7 @@ import com.temporal.demos.helloworld.config.TemporalConfig;
 import com.temporal.demos.helloworld.models.ApprovalDecision;
 import com.temporal.demos.helloworld.models.ApprovalRequest;
 import com.temporal.demos.helloworld.utils.WorkflowStatusUtil;
+import com.temporal.demos.helloworld.utils.WorkflowUtil;
 import com.temporal.demos.helloworld.workflows.ApprovalWorkflow;
 import io.temporal.client.WorkflowClient;
 import io.temporal.client.WorkflowExecutionAlreadyStarted;
@@ -111,7 +112,7 @@ public class ApprovalController {
 
     @GetMapping("/status/{workflowId}")
     public ResponseEntity<Map<String, Object>> getApprovalStatus(@PathVariable String workflowId) {
-        return WorkflowStatusUtil.getWorkflowStatus(workflowClient, workflowId, statusResponse -> {
+        return WorkflowUtil.getWorkflowStatus(workflowClient, workflowId, statusResponse -> {
             // Add approval-specific queries for running workflows
             ApprovalWorkflow workflow = workflowClient.newWorkflowStub(ApprovalWorkflow.class, workflowId);
             statusResponse.put("approvalStatus", workflow.getApprovalStatus());
