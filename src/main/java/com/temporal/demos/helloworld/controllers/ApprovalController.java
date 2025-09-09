@@ -38,8 +38,6 @@ public class ApprovalController {
                 : request.getRequestId();
         String workflowId = "approval-" + stableKey;
 
-        // String workflowId = "approval-" + UUID.randomUUID().toString();
-
         ApprovalWorkflow workflow = workflowClient.newWorkflowStub(
                 ApprovalWorkflow.class,
                 WorkflowOptions.newBuilder()
